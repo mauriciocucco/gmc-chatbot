@@ -6,9 +6,11 @@ import {
   HttpStatus,
   Post,
   Body,
+  UseGuards, // <---
 } from '@nestjs/common';
 import { WhatsappService } from './whatsapp.service';
 import type { Response } from 'express';
+import { WhatsappSignatureGuard } from './guards/whatsapp-signature.guard'; // <---
 
 @Controller('webhook')
 export class WhatsappController {
@@ -32,12 +34,13 @@ export class WhatsappController {
   }
 
   @Post()
+  @UseGuards(WhatsappSignatureGuard) // <--- Candado activado
   handleIncomingMessage(@Body() body: any, @Res() res: Response) {
     // 1. Siempre responder 200 OK a Meta inmediatamente.
     // Si tardamos mucho procesando, Meta considera que falló y reintenta el envío.
     res.status(HttpStatus.OK).send('EVENT_RECEIVED');
 
     // 2. Delegar el procesamiento al servicio (fire and forget)
-    this.whatsappService.handleMessage(body);
+    void this.whatsappService.handleMessage(body);
   }
 }

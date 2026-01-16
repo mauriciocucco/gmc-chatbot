@@ -3,7 +3,10 @@ import {
   Column,
   PrimaryGeneratedColumn,
   CreateDateColumn,
+  OneToMany,
 } from 'typeorm';
+import type { Conversation } from '../../conversation/entities/conversation.entity';
+import type { Appointment } from '../../appointment/entities/appointment.entity';
 
 @Entity('students')
 export class Student {
@@ -16,9 +19,19 @@ export class Student {
   @Column({ type: 'varchar', unique: true }) // El teléfono es el identificador único de negocio
   phoneNumber: string;
 
+  // --- NUEVO CAMPO: Fecha de Expiración ---
+  @Column({ type: 'timestamp', nullable: true })
+  accessExpiresAt: Date;
+
   @CreateDateColumn()
   createdAt: Date;
 
   @Column({ default: true })
   isActive: boolean;
+
+  @OneToMany('Conversation', 'student')
+  conversations: Conversation[];
+
+  @OneToMany('Appointment', 'student')
+  appointments: Appointment[];
 }

@@ -5,6 +5,8 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { StudentModule } from './student/student.module';
+import { AppointmentModule } from './appointment/appointment.module';
+import { KnowledgeModule } from './knowledge/knowledge.module';
 
 @Module({
   imports: [
@@ -19,12 +21,16 @@ import { StudentModule } from './student/student.module';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        autoLoadEntities: true, // Carga automática de entidades en los módulos
-        synchronize: true, // ⚠️ TRUE solo en DEV. Crea las tablas automáticamente.
+        autoLoadEntities: true,
+        synchronize: false,
+        migrationsRun: true, // Corre migraciones pendientes al iniciar la app
+        // -------------------
       }),
     }),
     WhatsappModule,
     StudentModule,
+    AppointmentModule,
+    KnowledgeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

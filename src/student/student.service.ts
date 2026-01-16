@@ -18,9 +18,13 @@ export class StudentService {
     phoneNumber: string,
     name: string = 'Sin Nombre',
   ): Promise<Student> {
+    const accessExpiresAt = new Date();
+    accessExpiresAt.setDate(accessExpiresAt.getDate() + 30);
+
     const newStudent = this.studentRepository.create({
       phoneNumber,
       name,
+      accessExpiresAt,
     });
     return this.studentRepository.save(newStudent);
   }

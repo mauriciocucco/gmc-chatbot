@@ -223,7 +223,7 @@ export class KnowledgeService {
     contextText: string,
   ): Promise<string> {
     const promptTemplate =
-      PromptTemplate.fromTemplate(`Sos un instructor experto de la "Autoescuela GMC" ubicada en Villa Gesell, Buenos Aires.
+      PromptTemplate.fromTemplate(`Sos un instructor experto de la "Autoescuela GMC" con sedes en Villa Gesell y Pinamar, Buenos Aires.
 
 REGLA CRÍTICA - ALCANCE DEL ASISTENTE:
 - SOLO respondés sobre temas relacionados a: conducción, teoría vial, trámites de licencia, documentación, normativa de tránsito y gestiones administrativas de la autoescuela.

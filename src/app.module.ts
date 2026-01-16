@@ -5,7 +5,6 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { StudentModule } from './student/student.module';
-import { AppointmentModule } from './appointment/appointment.module';
 import { KnowledgeModule } from './knowledge/knowledge.module';
 
 @Module({
@@ -29,7 +28,6 @@ import { KnowledgeModule } from './knowledge/knowledge.module';
     }),
     WhatsappModule,
     StudentModule,
-    AppointmentModule,
     KnowledgeModule,
   ],
   controllers: [AppController],

@@ -6,7 +6,6 @@ import {
   OneToMany,
 } from 'typeorm';
 import type { Conversation } from '../../conversation/entities/conversation.entity';
-import type { Appointment } from '../../appointment/entities/appointment.entity';
 
 @Entity('students')
 export class Student {
@@ -31,7 +30,4 @@ export class Student {
 
   @OneToMany('Conversation', 'student')
   conversations: Conversation[];
-
-  @OneToMany('Appointment', 'student')
-  appointments: Appointment[];
 }

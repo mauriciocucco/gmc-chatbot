@@ -5,19 +5,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { WhatsappController } from './whatsapp.controller';
 import { WhatsappService } from './whatsapp.service';
 import { KnowledgeModule } from '../knowledge/knowledge.module'; // <--- Import logic
-import {
-  STUDENT_PORT,
-  CONVERSATION_PORT,
-  APPOINTMENT_PORT,
-  WHATSAPP_PROVIDER,
-} from './ports';
+import { STUDENT_PORT, CONVERSATION_PORT, WHATSAPP_PROVIDER } from './ports';
 import { StudentAdapter } from '../student/student.adapter';
 import { ConversationAdapter } from '../conversation/conversation.adapter';
-import { AppointmentAdapter } from '../appointment/appointment.adapter';
 import { WhatsappProviderAdapter } from './adapters/whatsapp-provider.adapter';
 import { Student } from '../student/entities/student.entity';
 import { Conversation } from '../conversation/entities/conversation.entity';
-import { Appointment } from '../appointment/entities/appointment.entity';
 
 /**
  * WhatsappModule - Arquitectura Hexagonal
@@ -40,7 +33,7 @@ import { Appointment } from '../appointment/entities/appointment.entity';
     HttpModule,
     KnowledgeModule, // <--- Add module
     // TypeORM para los adaptadores
-    TypeOrmModule.forFeature([Student, Conversation, Appointment]),
+    TypeOrmModule.forFeature([Student, Conversation]),
   ],
   controllers: [WhatsappController],
   providers: [
@@ -53,10 +46,6 @@ import { Appointment } from '../appointment/entities/appointment.entity';
     {
       provide: CONVERSATION_PORT,
       useClass: ConversationAdapter,
-    },
-    {
-      provide: APPOINTMENT_PORT,
-      useClass: AppointmentAdapter,
     },
     {
       provide: WHATSAPP_PROVIDER,

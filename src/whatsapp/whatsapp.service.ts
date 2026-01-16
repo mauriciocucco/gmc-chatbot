@@ -6,18 +6,12 @@ import {
   extractFirstWhatsappMessage,
   extractWhatsappContactName,
 } from './utils/whatsapp.utils';
-import {
-  CONVERSATION_PORT,
-  STUDENT_PORT,
-  APPOINTMENT_PORT,
-  WHATSAPP_PROVIDER,
-} from './ports';
+import { CONVERSATION_PORT, STUDENT_PORT, WHATSAPP_PROVIDER } from './ports';
 import type {
   ConversationPort,
   ConversationData,
 } from './ports/conversation.port';
 import type { StudentPort, StudentData } from './ports/student.port';
-import type { AppointmentPort } from './ports/appointment.port';
 import type { WhatsappProviderPort } from './ports/whatsapp-provider.port';
 
 /**
@@ -48,8 +42,6 @@ export class WhatsappService {
     private readonly studentPort: StudentPort,
     @Inject(CONVERSATION_PORT)
     private readonly conversationPort: ConversationPort,
-    @Inject(APPOINTMENT_PORT)
-    private readonly appointmentPort: AppointmentPort,
     @Inject(WHATSAPP_PROVIDER)
     private readonly whatsappProvider: WhatsappProviderPort,
   ) {}

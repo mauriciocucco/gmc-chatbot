@@ -197,6 +197,34 @@ export class WhatsappService {
       return true;
     }
 
+    // Comando: Lista (muestra todos los alumnos con acceso activo)
+    if (command === 'lista') {
+      const activeStudents = await this.studentPort.findAllWithActiveAccess();
+
+      if (activeStudents.length === 0) {
+        await this.whatsappProvider.sendMessage(
+          adminPhone,
+          '📋 No hay alumnos con acceso activo actualmente.',
+        );
+        return true;
+      }
+
+      const studentList = activeStudents
+        .map((s) => {
+          const expDate = s.accessExpiresAt
+            ? new Date(s.accessExpiresAt).toLocaleDateString()
+            : 'N/A';
+          return `• ${s.phoneNumber} (${s.name}) - Acceso vence: ${expDate}`;
+        })
+        .join('\n');
+
+      await this.whatsappProvider.sendMessage(
+        adminPhone,
+        `📋 *Alumnos con acceso activo (${activeStudents.length}):*\n\n${studentList}`,
+      );
+      return true;
+    }
+
     return false;
   }
 

@@ -4,7 +4,8 @@
 export interface StudentPort {
   findByPhone(phoneNumber: string): Promise<StudentData | null>;
   create(phoneNumber: string, name: string): Promise<StudentData>;
-  updateAccessExpiration(studentId: string, date: Date): Promise<void>; // <--- New method
+  updateAccessExpiration(studentId: string, date: Date): Promise<void>;
+  findAllWithActiveAccess(): Promise<StudentData[]>;
 }
 
 export interface StudentData {

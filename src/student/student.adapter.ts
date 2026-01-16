@@ -38,6 +38,19 @@ export class StudentAdapter implements StudentPort {
     await this.studentRepository.update(studentId, { accessExpiresAt: date });
   }
 
+  async findAllWithActiveAccess(): Promise<StudentData[]> {
+    const now = new Date();
+    const students = await this.studentRepository
+      .createQueryBuilder('student')
+      .where('student.accessExpiresAt IS NOT NULL')
+      .andWhere('student.accessExpiresAt > :now', { now })
+      .andWhere('student.isActive = :isActive', { isActive: true })
+      .orderBy('student.accessExpiresAt', 'ASC')
+      .getMany();
+
+    return students.map((s) => this.toData(s));
+  }
+
   private toData(student: Student): StudentData {
     return {
       id: student.id,

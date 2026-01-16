@@ -23,6 +23,10 @@ import { KnowledgeModule } from './knowledge/knowledge.module';
         autoLoadEntities: true,
         synchronize: false,
         migrationsRun: true, // Corre migraciones pendientes al iniciar la app
+        ssl:
+          configService.get<string>('DB_SSL') === 'true'
+            ? { rejectUnauthorized: false }
+            : false,
         // -------------------
       }),
     }),

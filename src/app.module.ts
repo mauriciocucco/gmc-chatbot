@@ -22,7 +22,7 @@ import { KnowledgeModule } from './knowledge/knowledge.module';
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
         synchronize: false,
-        migrationsRun: true, // Corre migraciones pendientes al iniciar la app
+        migrationsRun: false, // Corre migraciones pendientes al iniciar la app
         ssl:
           configService.get<string>('DB_SSL') === 'true'
             ? { rejectUnauthorized: false }

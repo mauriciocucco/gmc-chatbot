@@ -1,9 +1,23 @@
-import { Controller, Post, Body, Get, Query } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, Delete } from '@nestjs/common';
 import { KnowledgeService } from './knowledge.service';
 
 @Controller('knowledge')
 export class KnowledgeController {
   constructor(private readonly knowledgeService: KnowledgeService) {}
+
+  /**
+   * Elimina las entradas de conocimiento de un source específico.
+   * Ejemplo: DELETE /knowledge/clear?source=knowledge-base.json
+   */
+  @Delete('clear')
+  async clearBySource(
+    @Query('source') source: string,
+  ): Promise<{ deleted: number }> {
+    if (!source) {
+      throw new Error('El parámetro "source" es requerido');
+    }
+    return this.knowledgeService.clearEntriesBySource(source);
+  }
 
   // Nuevo endpoint para cargar documentos/reglas: POST /knowledge/add-entry
   @Post('add-entry')

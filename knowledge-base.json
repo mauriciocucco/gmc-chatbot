@@ -2,12 +2,12 @@
   {
     "category": "Documentación",
     "question": "¿Qué documentos son obligatorios para circular en auto?",
-    "answer": "Licencia de conducir vigente (correspondiente al vehículo), DNI, Cédula Verde (o Azul si no sos titular), Comprobante de Seguro vigente, VTV al día y comprobante de pago de patente. En GNC, la oblea vigente."
+    "answer": "DNI, Licencia Nacional de Conducir vigente, Cédula de identificación del vehículo (cédula verde, física o digital), Comprobante de seguro obligatorio vigente (puede ser digital) y RTO/VTV vigente si corresponde en tu jurisdicción. Además, las chapas patente deben estar colocadas, legibles y normalizadas. Si el vehículo tiene GNC: oblea y tarjeta vigentes. (La cédula azul ya no es obligatoria para que un tercero conduzca; alcanza con la cédula verde y la documentación del conductor)."
   },
   {
     "category": "Alcohol",
     "question": "¿Cuál es el límite de alcohol en sangre permitido en Villa Gesell y Buenos Aires?",
-    "answer": "CERO (0.0 g/l). Rige la Ley de Alcohol Cero para todos los conductores (particulares y profesionales)."
+    "answer": "En la Provincia de Buenos Aires (incluye Villa Gesell) rige Alcohol Cero: 0 (cero) mg/L. A nivel nacional, la Ley 27.714 incorporó Alcohol Cero en la Ley 24.449 (al menos en jurisdicción federal/rutas nacionales)."
   },
   {
     "category": "Prioridades",
@@ -27,12 +27,22 @@
   {
     "category": "Velocidades",
     "question": "¿Cuál es la velocidad máxima en calles?",
-    "answer": "50 km/h en zona urbana, salvo señalización en contrario (Art. 51 Ley 24.449 actualizada)."
+    "answer": "40 km/h en zona urbana (calles), salvo señalización en contrario (Art. 51 Ley 24.449)."
   },
   {
     "category": "Velocidades",
     "question": "¿Cuál es la velocidad máxima en avenidas?",
     "answer": "60 km/h, salvo señalización en contrario."
+  },
+  {
+    "category": "Velocidades (Villa Gesell)",
+    "question": "¿Cuál es la velocidad máxima en avenidas en Villa Gesell?",
+    "answer": "Regla general (Ley 24.449): avenidas 60 km/h, salvo señalización en contrario. En Villa Gesell hay tramos señalizados y fiscalizados con límites menores (por ejemplo, Boulevard y Paseo 102: 50 km/h). Siempre respetá la cartelería."
+  },
+  {
+    "category": "Velocidades (Villa Gesell)",
+    "question": "¿Cuál es la velocidad máxima en calles en Villa Gesell?",
+    "answer": "En calles urbanas de Villa Gesell, el límite general es 40 km/h (Ley 24.449), salvo señalización en contrario. En el Partido hay tramos señalizados con límites distintos (por ejemplo, en Boulevard y Paseo 102 se permite 50 km/h). Siempre respetá la cartelería."
   },
   {
     "category": "Velocidades",
@@ -47,7 +57,7 @@
   {
     "category": "Velocidades",
     "question": "¿Cuál es la velocidad máxima en autopistas?",
-    "answer": "110 km/h para autos particulares, salvo señalización en contrario. En semiautopistas es 100 km/h."
+    "answer": "En autopistas: hasta 130 km/h para autos y motos; y 100 km/h para microbús/ómnibus/casas rodantes motorizadas. En semiautopistas: 120 km/h para autos y motos; para el resto de los vehículos rigen los mismos límites que en zona rural. Siempre manda la señalización."
   },
   {
     "category": "Velocidades",
@@ -62,12 +72,12 @@
   {
     "category": "Actualizaciones Ley 24.449",
     "question": "¿Qué cambios introdujo el Decreto 196/2025?",
-    "answer": "El Decreto 196/2025 (marzo 2025) es una reforma integral de la Ley 24.449 que actualiza: licencias de conducir (validez hasta 5 años), mayores exigencias para conductores de más de 65 años, normas de VTV, peajes y agilización de trámites."
+    "answer": "El Decreto 196/2025 NO cambia el texto de la Ley 24.449: modifica su reglamentación general (Decreto 779/95). Entre otros puntos, actualiza reglas operativas sobre Licencia Nacional de Conducir (formato digital y requisitos de aptitud psicofísica para renovar su validez), condiciones para principiantes y otros aspectos procedimentales."
   },
   {
     "category": "Actualizaciones Ley 24.449",
     "question": "¿Qué cambios introdujo la Ley 27.425 sobre luces?",
-    "answer": "La Ley 27.425 (2018) estableció la obligatoriedad de luces bajas (DRL) encendidas de fábrica en vehículos 0km, regulaciones sobre paragolpes y guardabarros, e incorporó las 'tres marías' (luces blancas adelante/rojas atrás) obligatorias en camiones con acoplado."
+    "answer": "La Ley 27.425 (B.O. 22/12/2017) sustituyó el Art. 47 (Uso de las luces) de la Ley 24.449: en rutas nacionales exige circular con luces bajas o luces diurnas (DRL) encendidas de día y de noche. Además, obliga a fabricantes/importadores a incorporar en nuevos modelos 0 km un sistema de encendido automático de luces bajas o DRL al poner en marcha el motor (según plazos reglamentarios)."
   },
   {
     "category": "Manejo en Playa",
@@ -92,7 +102,7 @@
   {
     "category": "Luces",
     "question": "¿Qué luces debo llevar encendidas en ruta de día?",
-    "answer": "Es obligatorio circular con las luces bajas encendidas las 24 horas en rutas y autopistas, aunque haya sol."
+    "answer": "En rutas nacionales, es obligatorio circular con luces bajas o luces diurnas (DRL) encendidas, de día y de noche."
   },
   {
     "category": "Luces",
@@ -177,7 +187,7 @@
   {
     "category": "Mecánica Básica",
     "question": "¿Cada cuánto se debe realizar la VTV?",
-    "answer": "Depende de la antigüedad del vehículo. En vehículos particulares de uso privado en PBA, es anual una vez que cumplen cierta antigüedad (generalmente 2 años o 60.000 km para la primera)."
+    "answer": "Depende de la jurisdicción y de la antigüedad del vehículo. En general, una vez que el vehículo supera cierta antigüedad, la revisión suele ser anual. Consultá el régimen de VTV/RTO de tu provincia (en PBA es VTV)."
   },
   {
     "category": "Mecánica Básica",
@@ -207,7 +217,7 @@
   {
     "category": "Documentación",
     "question": "¿Qué sucede si tengo la licencia vencida?",
-    "answer": "No se puede conducir. Si pasaron menos de 90 días del vencimiento, se puede renovar sin rendir exámenes prácticos (aunque no se puede manejar). Si pasan más de 90 días, se debe tramitar como original (rendir todo de nuevo)."
+    "answer": "No se puede conducir con la licencia vencida. La renovación (y si te exigen exámenes) depende de la jurisdicción y del tiempo de vencimiento; normalmente te pedirán el apto psicofísico y pueden requerir exámenes en algunos casos. Consultá el Centro Emisor/municipio."
   },
   {
     "category": "Documentación",

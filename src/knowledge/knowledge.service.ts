@@ -170,6 +170,19 @@ export class KnowledgeService {
   }
 
   /**
+   * Elimina las entradas de conocimiento filtradas por source.
+   * Útil para reingestar el knowledge-base.json sin afectar PDFs u otras fuentes.
+   */
+  async clearEntriesBySource(source: string): Promise<{ deleted: number }> {
+    const result = await this.knowledgeRepo.delete({ source });
+    const deleted = result.affected ?? 0;
+    this.logger.warn(
+      `🗑️ Se eliminaron ${deleted} entradas con source="${source}"`,
+    );
+    return { deleted };
+  }
+
+  /**
    * Verifica si existe un entry con el hash dado en metadata.
    * Usado para deduplicación durante la ingesta.
    */

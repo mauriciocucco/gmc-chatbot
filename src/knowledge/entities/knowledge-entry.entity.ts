@@ -23,6 +23,14 @@ export class KnowledgeEntry {
   @Column({ type: 'vector', width: 1536, nullable: true })
   embedding: number[];
 
+  /**
+   * Vector de búsqueda full-text para RAG híbrido.
+   * Se genera automáticamente via trigger en PostgreSQL.
+   * No es necesario setearlo manualmente.
+   */
+  @Column({ type: 'tsvector', nullable: true, select: false })
+  searchVector: string;
+
   @CreateDateColumn()
   createdAt: Date;
 }

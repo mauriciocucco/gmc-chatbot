@@ -2,6 +2,16 @@ import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { KnowledgeEntry } from './entities/knowledge-entry.entity';
+
+/** Resultado de la query híbrida de búsqueda de conocimiento */
+interface HybridSearchResult {
+  id: string;
+  content: string;
+  source: string;
+  metadata: Record<string, unknown>;
+  createdAt: Date;
+  hybrid_score: number;
+}
 import { OpenAIEmbeddings, ChatOpenAI } from '@langchain/openai';
 import { ConfigService } from '@nestjs/config';
 import { StringOutputParser } from '@langchain/core/output_parsers';
@@ -194,24 +204,101 @@ export class KnowledgeService {
     return count > 0;
   }
 
+  /**
+   * Búsqueda híbrida: combina semántica (embeddings) + léxica (full-text).
+   *
+   * Pesos por defecto:
+   * - 0.6 semántico: captura significado y parafraseo
+   * - 0.4 léxico: captura términos exactos (leyes, siglas, velocidades)
+   *
+   * @param userQuery - Pregunta del usuario
+   * @param limit - Cantidad máxima de resultados
+   * @param semanticWeight - Peso para búsqueda semántica (0-1)
+   */
   async searchKnowledge(
     userQuery: string,
     limit: number = 5,
+    semanticWeight: number = 0.6,
+  ): Promise<KnowledgeEntry[]> {
+    try {
+      const lexicalWeight = 1 - semanticWeight;
+      const queryEmbedding = await this.embeddingsModel.embedQuery(userQuery);
+      const embeddingString = `[${queryEmbedding.join(',')}]`;
+
+      // Búsqueda híbrida con CTE (Common Table Expressions)
+      // Convert cosine distance to similarity score (1 = identical)
+      const results: HybridSearchResult[] = await this.knowledgeRepo.query(
+        `
+        WITH semantic_scores AS (
+          SELECT 
+            id,
+            1 - (embedding <=> $1::vector) AS score
+          FROM knowledge_entries
+          WHERE embedding IS NOT NULL
+        ),
+        lexical_scores AS (
+          SELECT 
+            id,
+            ts_rank_cd(search_vector, plainto_tsquery('spanish', $2)) AS score
+          FROM knowledge_entries
+          WHERE search_vector @@ plainto_tsquery('spanish', $2)
+        ),
+        lexical_normalized AS (
+          SELECT 
+            id,
+            CASE 
+              WHEN MAX(score) OVER () > 0 
+              THEN score / MAX(score) OVER ()
+              ELSE 0 
+            END AS score
+          FROM lexical_scores
+        )
+        SELECT 
+          k.id,
+          k.content,
+          k.source,
+          k.metadata,
+          k."createdAt",
+          (COALESCE(s.score, 0) * $4 + COALESCE(l.score, 0) * $5) AS hybrid_score
+        FROM knowledge_entries k
+        LEFT JOIN semantic_scores s ON k.id = s.id
+        LEFT JOIN lexical_normalized l ON k.id = l.id
+        WHERE COALESCE(s.score, 0) > 0 OR COALESCE(l.score, 0) > 0
+        ORDER BY hybrid_score DESC
+        LIMIT $3
+        `,
+        [embeddingString, userQuery, limit, semanticWeight, lexicalWeight],
+      );
+
+      return results as unknown as KnowledgeEntry[];
+    } catch (error) {
+      const err = error as Error;
+      this.logger.error(`Error in hybrid search: ${err.message}`, err.stack);
+      // Fallback a búsqueda solo semántica si híbrida falla
+      return this.searchSemanticOnly(userQuery, limit);
+    }
+  }
+
+  /**
+   * Búsqueda solo semántica (fallback si híbrida falla).
+   */
+  private async searchSemanticOnly(
+    userQuery: string,
+    limit: number,
   ): Promise<KnowledgeEntry[]> {
     try {
       const queryEmbedding = await this.embeddingsModel.embedQuery(userQuery);
       const embeddingString = `[${queryEmbedding.join(',')}]`;
-      const results = await this.knowledgeRepo
+
+      return await this.knowledgeRepo
         .createQueryBuilder('k')
-        .orderBy(`k.embedding <-> :embedding`)
+        .orderBy(`k.embedding <=> :embedding`)
         .setParameters({ embedding: embeddingString })
         .limit(limit)
         .getMany();
-
-      return results;
     } catch (error) {
       const err = error as Error;
-      this.logger.error(`Error searching knowledge: ${err.message}`, err.stack);
+      this.logger.error(`Fallback search failed: ${err.message}`, err.stack);
       return [];
     }
   }
@@ -249,7 +336,7 @@ REGLA CRÍTICA DE LOCALIDAD:
 - Si el alumno pregunta algo genérico (ej: "¿dónde saco la licencia?"), respondé con los datos de Villa Gesell.
   
 Tu base de conocimiento tiene 3 niveles de prioridad:
-1. "Reglas Locales / Actualizaciones" (FUENTE: reglas_locales): ESTO ES LA VERDAD ABSOLUTA. Si contradice a los manuales, hacé caso a esto (ej: Cédula Azul derogada, reglas de playa).
+1. "Reglas Locales / Actualizaciones" (FUENTE: knoweledge-base.json): ESTO ES LA VERDAD ABSOLUTA. Si contradice a los manuales, hacé caso a esto (ej: Cédula Azul derogada, reglas de playa).
 2. "Preguntas Examen" (FUENTE: bateria_preguntas): Usalo para dar respuestas precisas de test.
 3. "Manual PBA / Ley Nacional" (FUENTE: manual_pba / cnev_nacional): Usalo para explicaciones generales (el relleno).
 

@@ -28,7 +28,12 @@ export class KnowledgeEntry {
    * Se genera automáticamente via trigger en PostgreSQL.
    * No es necesario setearlo manualmente.
    */
-  @Column({ type: 'tsvector', nullable: true, select: false })
+  @Column({
+    type: 'tsvector',
+    nullable: true,
+    select: false,
+    name: 'search_vector',
+  })
   searchVector: string;
 
   @CreateDateColumn()

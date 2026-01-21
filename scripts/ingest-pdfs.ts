@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
+import { TokenTextSplitter } from '@langchain/textsplitters';
 
 // pdf-parse v2: se usa como clase (new PDFParse({ data })) y luego getText().
 interface PdfParseTextResult {
@@ -231,9 +231,10 @@ async function ingestPdfs(): Promise<void> {
     return;
   }
 
-  const splitter = new RecursiveCharacterTextSplitter({
-    chunkSize: 1000,
-    chunkOverlap: 200,
+  const splitter = new TokenTextSplitter({
+    chunkSize: 512,
+    chunkOverlap: 50,
+    encodingName: 'cl100k_base',
   });
 
   // Set para evitar duplicados dentro de la misma ejecución

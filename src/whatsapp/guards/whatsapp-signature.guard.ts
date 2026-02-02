@@ -12,6 +12,7 @@ import type { Request } from 'express';
 // Extender interfaz Request para incluir rawBody (NestJS lo agrega con { rawBody: true })
 interface RequestWithRawBody extends Request {
   rawBody?: Buffer;
+  headers: Request['headers'];
 }
 
 @Injectable()

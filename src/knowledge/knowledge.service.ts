@@ -1,7 +1,18 @@
-import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  HttpException,
+  HttpStatus,
+  Inject,
+} from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { KnowledgeEntry } from './entities/knowledge-entry.entity';
+
+/** Dimensión por defecto para text-embedding-3-small */
+const DEFAULT_EMBEDDING_DIMENSION = 1536;
 
 /** Resultado de la query híbrida de búsqueda de conocimiento */
 interface HybridSearchResult {
@@ -36,11 +47,40 @@ export class KnowledgeService {
   private embeddingsModel: OpenAIEmbeddings;
   private chatModel: ChatOpenAI;
 
+  // Pesos configurables para búsqueda híbrida (desde .env)
+  private readonly semanticWeight: number;
+  private readonly lexicalWeight: number;
+
+  // Dimensión del modelo de embeddings (text-embedding-3-small = 1536)
+  private readonly embeddingDimension: number;
+
+  // Timeout para LLM (WhatsApp tiene timeouts estrictos)
+  private readonly LLM_TIMEOUT_MS = 30_000;
+  private readonly LLM_MAX_RETRIES = 2;
+
   constructor(
     @InjectRepository(KnowledgeEntry)
     private readonly knowledgeRepo: Repository<KnowledgeEntry>,
     private readonly configService: ConfigService,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
   ) {
+    // Pesos RAG híbrido desde variables de entorno
+    this.semanticWeight = parseFloat(
+      this.configService.get<string>('RAG_SEMANTIC_WEIGHT') ?? '0.6',
+    );
+    this.lexicalWeight = 1 - this.semanticWeight;
+    this.logger.log(
+      `⚖️ RAG weights: semantic=${this.semanticWeight}, lexical=${this.lexicalWeight}`,
+    );
+
+    // Dimensión de embeddings (debe coincidir con el modelo usado)
+    this.embeddingDimension = parseInt(
+      this.configService.get<string>('EMBEDDING_DIMENSION') ??
+        String(DEFAULT_EMBEDDING_DIMENSION),
+      10,
+    );
+
     // Embeddings: Mantener OpenAI (cambiar implica re-vectorizar toda la DB)
     this.embeddingsModel = new OpenAIEmbeddings({
       openAIApiKey: this.configService.get<string>('OPENAI_API_KEY'),
@@ -63,22 +103,25 @@ export class KnowledgeService {
     }
 
     this.chatModel = new ChatOpenAI({
-      apiKey: openRouterKey, // Usar 'apiKey' (estándar nuevo) en vez de 'openAIApiKey'
+      apiKey: openRouterKey,
       modelName: chatModel,
       temperature: 0.3,
       maxTokens: 300,
+      timeout: this.LLM_TIMEOUT_MS, // Evita que WhatsApp expire
+      maxRetries: this.LLM_MAX_RETRIES, // Retry con backoff automático
       configuration: {
         baseURL: 'https://openrouter.ai/api/v1',
         defaultHeaders: {
           'HTTP-Referer': 'https://autoescuela-gmc.com',
           'X-Title': 'Autoescuela GMC Bot',
-          // Forzar header de autorización por si la librería falla
           Authorization: `Bearer ${openRouterKey}`,
         },
       },
     });
 
-    this.logger.log(`🧠 Chat model configurado: ${chatModel}`);
+    this.logger.log(
+      `🧠 Chat model: ${chatModel} (timeout=${this.LLM_TIMEOUT_MS}ms, retries=${this.LLM_MAX_RETRIES})`,
+    );
   }
 
   async addKnowledgeEntry(
@@ -88,6 +131,15 @@ export class KnowledgeService {
   ): Promise<KnowledgeEntry> {
     try {
       const embedding = await this.embeddingsModel.embedQuery(content);
+
+      // Validar dimensión del embedding (previene corrupción de DB al cambiar modelo)
+      if (embedding.length !== this.embeddingDimension) {
+        throw new Error(
+          `Embedding dimension mismatch: expected ${this.embeddingDimension}, got ${embedding.length}. ` +
+            `¿Cambiaste el modelo de embeddings? Necesitás re-vectorizar la DB.`,
+        );
+      }
+
       const newEntry = this.knowledgeRepo.create({
         content,
         source,
@@ -218,11 +270,12 @@ export class KnowledgeService {
   async searchKnowledge(
     userQuery: string,
     limit: number = 5,
-    semanticWeight: number = 0.6,
   ): Promise<KnowledgeEntry[]> {
+    const startTime = Date.now();
+
     try {
-      const lexicalWeight = 1 - semanticWeight;
-      const queryEmbedding = await this.embeddingsModel.embedQuery(userQuery);
+      // Intentar obtener embedding desde cache
+      const queryEmbedding = await this.getOrCacheQueryEmbedding(userQuery);
       const embeddingString = `[${queryEmbedding.join(',')}]`;
 
       // Búsqueda híbrida con CTE (Common Table Expressions)
@@ -267,7 +320,20 @@ export class KnowledgeService {
         ORDER BY hybrid_score DESC
         LIMIT $3
         `,
-        [embeddingString, userQuery, limit, semanticWeight, lexicalWeight],
+        [
+          embeddingString,
+          userQuery,
+          limit,
+          this.semanticWeight,
+          this.lexicalWeight,
+        ],
+      );
+
+      // Métricas RAG para debugging y monitoreo
+      const elapsed = Date.now() - startTime;
+      const topScore = results[0]?.hybrid_score ?? 0;
+      this.logger.debug(
+        `📊 RAG: ${results.length} docs, top_score=${topScore.toFixed(3)}, elapsed=${elapsed}ms`,
       );
 
       return results.map((r) => ({
@@ -307,6 +373,29 @@ export class KnowledgeService {
       this.logger.error(`Fallback search failed: ${err.message}`, err.stack);
       return [];
     }
+  }
+
+  /**
+   * Obtiene el embedding de una query, usando cache para queries frecuentes.
+   * TTL de 1 hora - queries como "velocidad máxima" se repiten mucho.
+   */
+  private async getOrCacheQueryEmbedding(query: string): Promise<number[]> {
+    const cacheKey = `emb:${query.toLowerCase().trim()}`;
+    const cached = await this.cacheManager.get<number[]>(cacheKey);
+
+    if (cached) {
+      this.logger.debug(
+        `🎯 Cache hit para embedding: "${query.slice(0, 30)}..."`,
+      );
+      return cached;
+    }
+
+    const embedding = await this.embeddingsModel.embedQuery(query);
+
+    // Cache por 1 hora (3600 segundos)
+    await this.cacheManager.set(cacheKey, embedding, 3600 * 1000);
+
+    return embedding;
   }
 
   async ask(userQuery: string): Promise<string> {

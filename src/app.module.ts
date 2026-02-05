@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
@@ -10,6 +11,12 @@ import { KnowledgeModule } from './knowledge/knowledge.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // Cache en memoria para embeddings de queries frecuentes
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 3600 * 1000, // 1 hora por defecto
+      max: 500, // Máximo 500 entradas en cache
+    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

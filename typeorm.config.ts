@@ -14,6 +14,9 @@ export default new DataSource({
   entities: [join(__dirname, 'src', '**', '*.entity.ts')],
   migrations: [join(__dirname, 'src', 'migrations', '*.ts')],
   synchronize: false,
+  // "each" permite que migraciones individuales controlen su modo de transacción
+  // Necesario para CREATE INDEX CONCURRENTLY que no puede correr en transacción
+  migrationsTransactionMode: 'each',
   ssl:
     process.env.DB_SSL === 'true'
       ? {

@@ -270,7 +270,13 @@ export class KnowledgeService {
         [embeddingString, userQuery, limit, semanticWeight, lexicalWeight],
       );
 
-      return results as unknown as KnowledgeEntry[];
+      return results.map((r) => ({
+        id: r.id,
+        content: r.content,
+        source: r.source,
+        metadata: r.metadata,
+        createdAt: r.createdAt,
+      })) as KnowledgeEntry[];
     } catch (error) {
       const err = error as Error;
       this.logger.error(`Error in hybrid search: ${err.message}`, err.stack);
@@ -336,7 +342,7 @@ REGLA CRÍTICA DE LOCALIDAD:
 - Si el alumno pregunta algo genérico (ej: "¿dónde saco la licencia?"), respondé con los datos de Villa Gesell.
   
 Tu base de conocimiento tiene 3 niveles de prioridad:
-1. "Reglas Locales / Actualizaciones" (FUENTE: knoweledge-base.json): ESTO ES LA VERDAD ABSOLUTA. Si contradice a los manuales, hacé caso a esto (ej: Cédula Azul derogada, reglas de playa).
+1. "Reglas Locales / Actualizaciones" (FUENTE: knowledge-base.json): ESTO ES LA VERDAD ABSOLUTA. Si contradice a los manuales, hacé caso a esto (ej: Cédula Azul derogada, reglas de playa).
 2. "Preguntas Examen" (FUENTE: bateria_preguntas): Usalo para dar respuestas precisas de test.
 3. "Manual PBA / Ley Nacional" (FUENTE: manual_pba / cnev_nacional): Usalo para explicaciones generales (el relleno).
 

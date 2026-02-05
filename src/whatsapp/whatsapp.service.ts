@@ -1,4 +1,11 @@
-import { Injectable, ForbiddenException, Logger, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  Logger,
+  Inject,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConversationStep } from '../conversation/enums/conversation-step.enum';
 import { KnowledgeService } from '../knowledge/knowledge.service';
@@ -26,14 +33,16 @@ import type { WhatsappProviderPort } from './ports/whatsapp-provider.port';
  * - Clean Architecture: El dominio no depende de infraestructura
  */
 @Injectable()
-export class WhatsappService {
+export class WhatsappService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(WhatsappService.name);
 
   // Rate Limiting (Anti-Factura Exorbitante)
   // 30 preguntas cada 1 hora por alumno
   private readonly RATE_LIMIT_WINDOW = 60 * 60 * 1000;
   private readonly MAX_REQUESTS_PER_WINDOW = 30;
+  private readonly CLEANUP_INTERVAL = 5 * 60 * 1000; // Limpieza cada 5 minutos
   private usageMap = new Map<string, { count: number; expiresAt: number }>();
+  private cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private readonly configService: ConfigService,
@@ -45,6 +54,45 @@ export class WhatsappService {
     @Inject(WHATSAPP_PROVIDER)
     private readonly whatsappProvider: WhatsappProviderPort,
   ) {}
+
+  onModuleInit(): void {
+    // Iniciar limpieza periódica de rate limits expirados
+    this.cleanupTimer = setInterval(() => {
+      this.cleanExpiredRateLimits();
+    }, this.CLEANUP_INTERVAL);
+    this.logger.log('🧹 Rate limit cleanup timer iniciado');
+  }
+
+  onModuleDestroy(): void {
+    // Limpiar el timer al destruir el módulo
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
+      this.logger.log('🛑 Rate limit cleanup timer detenido');
+    }
+  }
+
+  /**
+   * Limpia entradas expiradas del mapa de rate limiting.
+   * Previene memory leak al eliminar registros que ya no son necesarios.
+   */
+  private cleanExpiredRateLimits(): void {
+    const now = Date.now();
+    let cleaned = 0;
+
+    for (const [key, record] of this.usageMap) {
+      if (now > record.expiresAt) {
+        this.usageMap.delete(key);
+        cleaned++;
+      }
+    }
+
+    if (cleaned > 0) {
+      this.logger.debug(
+        `🧹 Limpiadas ${cleaned} entradas de rate limit expiradas`,
+      );
+    }
+  }
 
   verifyWebhook(mode: string, token: string, challenge: string): string {
     const verifyToken = this.configService.get<string>('WHATSAPP_VERIFY_TOKEN');
@@ -73,9 +121,9 @@ export class WhatsappService {
       const rawFrom = messageData.from;
       const from = this.cleanPhoneNumber(rawFrom);
       const textBody = messageData.text?.body?.trim() || '';
-
       // 1. ZONA ADMIN: Comandos
       const adminPhone = this.configService.get<string>('ADMIN_PHONE_NUMBER');
+
       if (from === adminPhone) {
         if (await this.handleAdminCommands(from, textBody)) {
           return;
@@ -136,12 +184,7 @@ export class WhatsappService {
       }
 
       const days = parseInt(parts[2] || '30');
-      // Lógica de limpieza: si viene sin 54, asumimos que es local y lo agregamos.
-      // Si ya tiene 54 o 549, lo normalizamos con cleanPhoneNumber
-      let targetPhone = rawTargetPhone;
-
-      if (!targetPhone.startsWith('54')) targetPhone = '54' + targetPhone;
-      targetPhone = this.cleanPhoneNumber(targetPhone);
+      const targetPhone = this.normalizePhoneNumber(rawTargetPhone);
 
       let student = await this.studentPort.findByPhone(targetPhone);
 
@@ -174,10 +217,7 @@ export class WhatsappService {
         return true;
       }
 
-      let targetPhone = rawTargetPhone;
-
-      if (!targetPhone.startsWith('54')) targetPhone = '54' + targetPhone;
-      targetPhone = this.cleanPhoneNumber(targetPhone);
+      const targetPhone = this.normalizePhoneNumber(rawTargetPhone);
 
       const student = await this.studentPort.findByPhone(targetPhone);
 
@@ -230,13 +270,30 @@ export class WhatsappService {
 
   // --- PRIVATE HELPERS (Clean Code) ---
 
+  /**
+   * Limpia el número de teléfono removiendo el 9 del prefijo 549.
+   * Parche para Argentina en Sandbox: 549... → 54...
+   */
   private cleanPhoneNumber(phone: string): string {
-    // Parche para Argentina en Sandbox:
-    // Si viene con 549... (ej: 5491169769016), lo transformamos a 54... (ej: 541169769016)
     if (phone.startsWith('549')) {
       return phone.replace('549', '54');
     }
     return phone;
+  }
+
+  /**
+   * Normaliza un número de teléfono:
+   * 1. Agrega prefijo 54 si no lo tiene
+   * 2. Limpia el 9 de 549 si existe
+   */
+  private normalizePhoneNumber(phone: string): string {
+    let normalized = phone;
+
+    if (!normalized.startsWith('54')) {
+      normalized = '54' + normalized;
+    }
+
+    return this.cleanPhoneNumber(normalized);
   }
 
   private async getOrCreateStudent(
@@ -290,6 +347,7 @@ export class WhatsappService {
 
       default:
         this.logger.warn(`Estado desconocido: ${conversation.step}`);
+
         await this.whatsappProvider.sendMessage(
           conversation.student.phoneNumber,
           'Hubo un error en mi memoria. Escribí "reset" para reiniciar.',
@@ -301,9 +359,11 @@ export class WhatsappService {
 
   private async handleWelcome(conversation: ConversationData): Promise<void> {
     let studentName = conversation.student.name?.trim();
+
     if (!studentName || studentName === 'Sin Nombre') {
       studentName = 'Futuro Conductor/a';
     }
+
     const welcomeMessage = `🚗 *Autoescuela GMC* \n\nHola ${studentName}! Soy tu asistente virtual para preparar el examen teórico de conducir. 🧠\n\nPreguntame lo que quieras sobre:\n• Señales de tránsito\n• Prioridades de paso\n• Velocidades máximas\n• Documentación obligatoria\n• Y mucho más...\n\n¡Escribí tu duda y te ayudo!`;
 
     await this.whatsappProvider.sendMessage(
@@ -319,6 +379,7 @@ export class WhatsappService {
   private async handleLearning(conversation: ConversationData, text: string) {
     // Detectar saludos para enviar Bienvenida predefinida (Ahorra AI + UX Consistente)
     const greetings = ['hola', 'buen dia', 'buen día', 'buenas', 'hi', 'hello'];
+
     if (greetings.includes(text.trim().toLowerCase())) {
       await this.handleWelcome(conversation);
       return;

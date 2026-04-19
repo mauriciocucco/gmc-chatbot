@@ -24,6 +24,7 @@
     "migration:revert": "npm run typeorm -- migration:revert -d typeorm.config.ts",
     "eval:generate": "npx ts-node scripts/generate-evals.ts",
     "eval:run": "npx ts-node scripts/run-eval.ts",
+    "eval:run:rerank": "npx ts-node scripts/run-eval.ts --rerank",
     "eval:answers": "npx ts-node scripts/run-answer-eval.ts"
   },
   "dependencies": {

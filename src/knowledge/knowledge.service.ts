@@ -36,6 +36,7 @@ import { OpenAIEmbeddings, ChatOpenAI } from '@langchain/openai';
 import { ConfigService } from '@nestjs/config';
 import { StringOutputParser } from '@langchain/core/output_parsers';
 import { PromptTemplate } from '@langchain/core/prompts';
+import { normalizeRagQuery } from './rag-query-normalization';
 
 /**
  * KnowledgeService - Motor RAG del chatbot
@@ -145,7 +146,7 @@ export class KnowledgeService implements OnModuleInit {
     const rerankerModel =
       this.configService.get<string>('RERANKER_MODEL') ??
       'BAAI/bge-reranker-v2-m3';
-    this.rerankerEndpoint = `https://api-inference.huggingface.co/models/${rerankerModel}`;
+    this.rerankerEndpoint = `https://router.huggingface.co/hf-inference/models/${rerankerModel}`;
 
     if (this.rerankerEnabled) {
       this.logger.log(
@@ -168,7 +169,7 @@ export class KnowledgeService implements OnModuleInit {
         void axios
           .post(
             this.rerankerEndpoint,
-            { inputs: [['warmup', 'warmup']] },
+            { inputs: [{ text: 'warmup', text_pair: 'warmup' }] },
             {
               headers: {
                 Authorization: `Bearer ${this.hfApiKey}`,
@@ -335,10 +336,18 @@ export class KnowledgeService implements OnModuleInit {
     limit: number = 5,
   ): Promise<KnowledgeEntry[]> {
     const startTime = Date.now();
+    const retrievalQuery = normalizeRagQuery(userQuery);
+
+    if (retrievalQuery !== userQuery) {
+      this.logger.debug(
+        `🔎 Query normalizada para retrieval: "${userQuery}" -> "${retrievalQuery}"`,
+      );
+    }
 
     try {
       // Intentar obtener embedding desde cache
-      const queryEmbedding = await this.getOrCacheQueryEmbedding(userQuery);
+      const queryEmbedding =
+        await this.getOrCacheQueryEmbedding(retrievalQuery);
       const embeddingString = `[${queryEmbedding.join(',')}]`;
 
       // Búsqueda híbrida con CTE (Common Table Expressions)
@@ -385,7 +394,7 @@ export class KnowledgeService implements OnModuleInit {
         `,
         [
           embeddingString,
-          userQuery,
+          retrievalQuery,
           limit,
           this.semanticWeight,
           this.lexicalWeight,
@@ -410,7 +419,7 @@ export class KnowledgeService implements OnModuleInit {
       const err = error as Error;
       this.logger.error(`Error in hybrid search: ${err.message}`, err.stack);
       // Fallback a búsqueda solo semántica si híbrida falla
-      return this.searchSemanticOnly(userQuery, limit);
+      return this.searchSemanticOnly(retrievalQuery, limit);
     }
   }
 
@@ -422,7 +431,9 @@ export class KnowledgeService implements OnModuleInit {
     limit: number,
   ): Promise<KnowledgeEntry[]> {
     try {
-      const queryEmbedding = await this.embeddingsModel.embedQuery(userQuery);
+      const retrievalQuery = normalizeRagQuery(userQuery);
+      const queryEmbedding =
+        await this.embeddingsModel.embedQuery(retrievalQuery);
       const embeddingString = `[${queryEmbedding.join(',')}]`;
 
       return await this.knowledgeRepo
@@ -443,17 +454,18 @@ export class KnowledgeService implements OnModuleInit {
    * TTL de 1 hora - queries como "velocidad máxima" se repiten mucho.
    */
   private async getOrCacheQueryEmbedding(query: string): Promise<number[]> {
-    const cacheKey = `emb:${query.toLowerCase().trim()}`;
+    const normalizedQuery = normalizeRagQuery(query);
+    const cacheKey = `emb:${normalizedQuery.toLowerCase().trim()}`;
     const cached = await this.cacheManager.get<number[]>(cacheKey);
 
     if (cached) {
       this.logger.debug(
-        `🎯 Cache hit para embedding: "${query.slice(0, 30)}..."`,
+        `🎯 Cache hit para embedding: "${normalizedQuery.slice(0, 30)}..."`,
       );
       return cached;
     }
 
-    const embedding = await this.embeddingsModel.embedQuery(query);
+    const embedding = await this.embeddingsModel.embedQuery(normalizedQuery);
 
     // Cache por 1 hora (3600 segundos)
     await this.cacheManager.set(cacheKey, embedding, 3600 * 1000);
@@ -463,23 +475,31 @@ export class KnowledgeService implements OnModuleInit {
 
   /**
    * Re-rankea una lista de documentos candidatos usando un cross-encoder de HuggingFace.
-   * Si el reranker está deshabilitado, falla o excede el timeout, devuelve los candidatos
-   * en su orden original (top K).
+   * Siempre intenta llamar al reranker — la decisión de habilitarlo es del llamador.
+   * Si falla o excede el timeout, devuelve los candidatos en su orden original (top K).
    */
   async rerankResults(
     query: string,
     candidates: KnowledgeEntry[],
   ): Promise<KnowledgeEntry[]> {
-    if (!this.rerankerEnabled || !this.hfApiKey || candidates.length === 0) {
+    if (!this.hfApiKey || candidates.length === 0) {
       return candidates.slice(0, RERANKER_TOP_K);
     }
 
     try {
-      const pairs = candidates.map((doc) => [query, doc.content]);
+      const rerankQuery = normalizeRagQuery(query);
+      const documents = candidates.map((doc) => doc.content);
 
-      const response = await axios.post<number[]>(
+      const response = await axios.post<
+        Array<Array<{ label: string; score: number }>>
+      >(
         this.rerankerEndpoint,
-        { inputs: pairs },
+        {
+          inputs: documents.map((doc) => ({
+            text: rerankQuery,
+            text_pair: doc,
+          })),
+        },
         {
           headers: {
             Authorization: `Bearer ${this.hfApiKey}`,
@@ -489,25 +509,36 @@ export class KnowledgeService implements OnModuleInit {
         },
       );
 
-      const scores: number[] = Array.isArray(response.data)
-        ? response.data
-        : [];
+      const results = response.data;
+
+      if (
+        !Array.isArray(results) ||
+        results.length === 0 ||
+        !Array.isArray(results[0])
+      ) {
+        this.logger.warn(
+          `⚠️ Reranker devolvió respuesta vacía/inválida. Usando orden original.`,
+        );
+        return candidates.slice(0, RERANKER_TOP_K);
+      }
+
+      const scores = results[0];
 
       if (scores.length !== candidates.length) {
         this.logger.warn(
-          `⚠️ Reranker devolvió ${scores.length} scores para ${candidates.length} candidatos. Usando orden original.`,
+          `⚠️ Reranker devolvió distinta cantidad de scores (${scores.length}) que candidatos (${candidates.length}). Usando orden original.`,
         );
         return candidates.slice(0, RERANKER_TOP_K);
       }
 
       const ranked = candidates
-        .map((doc, i) => ({ doc, score: scores[i] ?? 0 }))
+        .map((doc, index) => ({ doc, score: scores[index].score }))
         .sort((a, b) => b.score - a.score)
-        .slice(0, RERANKER_TOP_K)
-        .map((item) => item.doc);
+        .map((r) => r.doc)
+        .slice(0, RERANKER_TOP_K);
 
       this.logger.debug(
-        `🔀 Reranker: ${candidates.length} candidatos → top ${ranked.length} (top score=${(scores[0] ?? 0).toFixed(3)})`,
+        `🔀 Reranker completado: top K=${ranked.length} (top score=${scores.sort((a, b) => b.score - a.score)[0]?.score?.toFixed(3) ?? 0})`,
       );
 
       return ranked;
@@ -559,17 +590,33 @@ export class KnowledgeService implements OnModuleInit {
   }
 
   /**
+   * Búsqueda con reranking — para evaluación y debugging.
+   * Siempre reranquea (ignora RERANKER_ENABLED) para poder medir el impacto real.
+   */
+  async searchReranked(userQuery: string): Promise<KnowledgeEntry[]> {
+    const candidates = await this.searchKnowledge(
+      userQuery,
+      RERANKER_CANDIDATE_COUNT,
+    );
+    return this.rerankResults(userQuery, candidates);
+  }
+
+  /**
    * Paso de búsqueda + reranking compartido entre ask() y askWithContext().
-   * Busca más candidatos cuando el reranker está activo para luego filtrar.
+   * Respeta RERANKER_ENABLED: si es false, devuelve los top-5 del hybrid search directo.
    */
   private async retrieveAndRerank(
     userQuery: string,
   ): Promise<{ docs: KnowledgeEntry[] }> {
-    const candidateCount = this.rerankerEnabled
-      ? RERANKER_CANDIDATE_COUNT
-      : RERANKER_TOP_K;
+    if (!this.rerankerEnabled) {
+      const docs = await this.searchKnowledge(userQuery, RERANKER_TOP_K);
+      return { docs };
+    }
 
-    const candidates = await this.searchKnowledge(userQuery, candidateCount);
+    const candidates = await this.searchKnowledge(
+      userQuery,
+      RERANKER_CANDIDATE_COUNT,
+    );
     const docs = await this.rerankResults(userQuery, candidates);
     return { docs };
   }

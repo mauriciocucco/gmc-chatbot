@@ -10,6 +10,9 @@ const EVAL_FILE = path.join(EVAL_DATA_DIR, 'eval-questions.json');
 const RESULTS_DIR = path.join(EVAL_DATA_DIR, 'results');
 const SEARCH_URL = 'http://localhost:3000/knowledge/search';
 
+/** Si se pasa --rerank como argumento, el eval usa el pipeline con reranker */
+const USE_RERANKER = process.argv.includes('--rerank');
+
 /** k values para Recall@k */
 const K_VALUES = [5, 10] as const;
 type KValue = (typeof K_VALUES)[number];
@@ -57,7 +60,7 @@ async function searchKnowledge(
   limit: number,
 ): Promise<SearchResultItem[]> {
   const response = await axios.get<SearchResultItem[]>(SEARCH_URL, {
-    params: { q: query, limit },
+    params: { q: query, limit, rerank: USE_RERANKER ? 'true' : undefined },
     timeout: 15_000,
   });
   return response.data;
@@ -94,16 +97,22 @@ async function runEval(): Promise<void> {
   ) as EvalQuestion[];
 
   console.log(
-    `📋 Evaluando ${evalQuestions.length} preguntas contra el retriever...`,
+    `📋 Evaluando ${evalQuestions.length} preguntas contra el retriever${
+      USE_RERANKER ? ' (con reranker)' : ''
+    }...`,
   );
-  console.log(`🎯 Métricas: Recall@${K_VALUES.join(' y Recall@')}\n`);
+  console.log(
+    `🎯 Métricas: Recall@${USE_RERANKER ? '5 (reranker top-K)' : K_VALUES.join(' y Recall@')}\n`,
+  );
 
   const results: EvalResult[] = [];
   let processed = 0;
 
   for (const evalQ of evalQuestions) {
     try {
-      const retrieved = await searchKnowledge(evalQ.question, 10);
+      // Con reranker el endpoint devuelve solo 5 resultados
+      const fetchLimit = 10;
+      const retrieved = await searchKnowledge(evalQ.question, fetchLimit);
       const retrievedIds = retrieved.map((r) => r.id);
 
       results.push({
@@ -145,14 +154,18 @@ async function runEval(): Promise<void> {
   const hitsAt10 = results.filter((r) => r.hitAt10).length;
 
   console.log('═══════════════════════════════════════════════════');
-  console.log('         RESULTADOS DE EVALUACIÓN RAG              ');
+  console.log(
+    `         RESULTADOS DE EVALUACIÓN RAG ${USE_RERANKER ? '(+RERANKER)' : ''}`,
+  );
   console.log('═══════════════════════════════════════════════════');
   console.log(
     `  Recall@5:   ${formatPercent(hitsAt5, total).padStart(7)}   (${hitsAt5}/${total} preguntas)`,
   );
-  console.log(
-    `  Recall@10:  ${formatPercent(hitsAt10, total).padStart(7)}   (${hitsAt10}/${total} preguntas)`,
-  );
+  if (!USE_RERANKER) {
+    console.log(
+      `  Recall@10:  ${formatPercent(hitsAt10, total).padStart(7)}   (${hitsAt10}/${total} preguntas)`,
+    );
+  }
   console.log('───────────────────────────────────────────────────');
 
   // ── Desglose por source ────────────────────────────────────────────────────
@@ -162,8 +175,11 @@ async function runEval(): Promise<void> {
     const sr = results.filter((r) => r.source === source);
     const srcHitsAt5 = sr.filter((r) => r.hitAt5).length;
     const srcHitsAt10 = sr.filter((r) => r.hitAt10).length;
+    const r10str = USE_RERANKER
+      ? ''
+      : `  R@10: ${formatPercent(srcHitsAt10, sr.length).padStart(6)}`;
     console.log(
-      `    ${source.padEnd(24)} R@5: ${formatPercent(srcHitsAt5, sr.length).padStart(6)}  R@10: ${formatPercent(srcHitsAt10, sr.length).padStart(6)}  (n=${sr.length})`,
+      `    ${source.padEnd(24)} R@5: ${formatPercent(srcHitsAt5, sr.length).padStart(6)}${r10str}  (n=${sr.length})`,
     );
   }
 

@@ -37,12 +37,25 @@ export class KnowledgeController {
   }
 
   // Endpoint para probar búsqueda: GET /knowledge/search?q=...&limit=10
+  /**
+   * GET /knowledge/search?q=...&limit=10&rerank=true
+   * Con rerank=true: recupera 15 candidatos y los reordena con el cross-encoder.
+   * Sin rerank (default): devuelve los resultados del retriever híbrido directamente.
+   */
   @Get('search')
-  async search(@Query('q') query: string, @Query('limit') limit?: string) {
+  async search(
+    @Query('q') query: string,
+    @Query('limit') limit?: string,
+    @Query('rerank') rerank?: string,
+  ) {
     const parsedLimit =
       limit !== undefined && !isNaN(parseInt(limit, 10))
         ? parseInt(limit, 10)
         : undefined;
+
+    if (rerank === 'true') {
+      return this.knowledgeService.searchReranked(query);
+    }
 
     return this.knowledgeService.searchKnowledge(query, parsedLimit);
   }
@@ -66,9 +79,7 @@ export class KnowledgeController {
    * GET /knowledge/ask-with-context?q=...
    */
   @Get('ask-with-context')
-  async askWithContext(
-    @Query('q') query: string,
-  ): Promise<{
+  async askWithContext(@Query('q') query: string): Promise<{
     question: string;
     answer: string;
     context: Array<{ id: string; content: string; source: string }>;

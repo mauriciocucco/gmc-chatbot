@@ -36,10 +36,15 @@ export class KnowledgeController {
     );
   }
 
-  // Endpoint para probar búsqueda: GET /knowledge/search?q=...
+  // Endpoint para probar búsqueda: GET /knowledge/search?q=...&limit=10
   @Get('search')
-  async search(@Query('q') query: string) {
-    return this.knowledgeService.searchKnowledge(query);
+  async search(@Query('q') query: string, @Query('limit') limit?: string) {
+    const parsedLimit =
+      limit !== undefined && !isNaN(parseInt(limit, 10))
+        ? parseInt(limit, 10)
+        : undefined;
+
+    return this.knowledgeService.searchKnowledge(query, parsedLimit);
   }
 
   /**
@@ -53,5 +58,31 @@ export class KnowledgeController {
   ): Promise<{ exists: boolean }> {
     const exists = await this.knowledgeService.existsByContentHash(hash);
     return { exists };
+  }
+
+  /**
+   * Responde una pregunta y expone el contexto recuperado.
+   * Usado por el script de evaluación LLM-as-judge (eval:answers).
+   * GET /knowledge/ask-with-context?q=...
+   */
+  @Get('ask-with-context')
+  async askWithContext(
+    @Query('q') query: string,
+  ): Promise<{
+    question: string;
+    answer: string;
+    context: Array<{ id: string; content: string; source: string }>;
+  }> {
+    const { answer, context } =
+      await this.knowledgeService.askWithContext(query);
+    return {
+      question: query,
+      answer,
+      context: context.map((c) => ({
+        id: c.id,
+        content: c.content,
+        source: c.source,
+      })),
+    };
   }
 }

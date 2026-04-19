@@ -25,6 +25,11 @@ async function loadPdfParseConstructor(): Promise<PdfParseConstructor> {
   return module.PDFParse;
 }
 
+interface Section {
+  header: string;
+  content: string;
+}
+
 const API_URL = 'http://localhost:3000/knowledge/add-entry';
 const EXISTS_URL = 'http://localhost:3000/knowledge/exists';
 const DOCS_DIR = path.join(__dirname, '../docs');
@@ -149,6 +154,77 @@ function isValidChunk(text: string): boolean {
 }
 
 /**
+ * Patrones que identifican encabezados de sección en documentos legales/educativos en español.
+ */
+const SECTION_HEADER_PATTERNS = [
+  /^(CAPÍTULO|CAPITULO|TÍTULO|TITULO|SECCIÓN|SECCION)\s+[\dIVXLCDM]+/i,
+  /^ARTÍCULO\s+\d+/i,
+  /^Art(ículo|iculo)?\.?\s*\d+/i,
+];
+
+function isLikelySectionHeader(line: string): boolean {
+  const trimmed = line.trim();
+
+  if (trimmed.length === 0 || trimmed.length > 80) return false;
+
+  if (SECTION_HEADER_PATTERNS.some((p) => p.test(trimmed))) return true;
+
+  // Líneas en MAYÚSCULAS (5-60 chars) con al menos una letra son probables encabezados
+  const hasLetters = /[A-ZÁÉÍÓÚÑ]/i.test(trimmed);
+
+  if (
+    hasLetters &&
+    trimmed.length >= 5 &&
+    trimmed.length <= 60 &&
+    trimmed === trimmed.toUpperCase() &&
+    !/^\d+$/.test(trimmed)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Divide el texto limpio de un documento en secciones basándose en encabezados detectados.
+ * Si no se detectan suficientes secciones, devuelve el documento completo como una sola sección.
+ */
+function splitIntoSections(text: string, fallbackHeader: string): Section[] {
+  const lines = text.split('\n');
+  const sections: Section[] = [];
+  let currentHeader = fallbackHeader;
+  const currentContent: string[] = [];
+
+  for (const line of lines) {
+    if (isLikelySectionHeader(line)) {
+      const content = currentContent.join('\n').trim();
+
+      if (content.length > 0) {
+        sections.push({ header: currentHeader, content });
+      }
+
+      currentHeader = line.trim();
+      currentContent.length = 0;
+    } else {
+      currentContent.push(line);
+    }
+  }
+
+  const remaining = currentContent.join('\n').trim();
+
+  if (remaining.length > 0) {
+    sections.push({ header: currentHeader, content: remaining });
+  }
+
+  // Con una sola sección o ninguna, tratar el documento entero como sección única
+  if (sections.length <= 1) {
+    return [{ header: fallbackHeader, content: text }];
+  }
+
+  return sections;
+}
+
+/**
  * Genera hash SHA-256 del contenido para deduplicación.
  */
 function hashContent(content: string): string {
@@ -231,11 +307,18 @@ async function ingestPdfs(): Promise<void> {
     return;
   }
 
+  const chunkSize = parseInt(process.env.CHUNK_SIZE ?? '512', 10);
+  const chunkOverlap = parseInt(process.env.CHUNK_OVERLAP ?? '50', 10);
+
   const splitter = new TokenTextSplitter({
-    chunkSize: 512,
-    chunkOverlap: 50,
+    chunkSize,
+    chunkOverlap,
     encodingName: 'cl100k_base',
   });
+
+  console.log(
+    `   ✂️ Chunk size: ${chunkSize} tokens, overlap: ${chunkOverlap} tokens`,
+  );
 
   // Set para evitar duplicados dentro de la misma ejecución
   const processedHashes = new Set<string>();
@@ -263,62 +346,78 @@ async function ingestPdfs(): Promise<void> {
       const rawText = await extractTextFromPdf(pdfPath);
       const cleanedText = cleanRawText(rawText);
 
-      const chunks = await splitter.createDocuments([cleanedText]);
-      console.log(`   ✂️ Se generaron ${chunks.length} fragmentos.`);
+      const sections = splitIntoSections(cleanedText, fileInfo.description);
+      console.log(`   📑 Secciones detectadas: ${sections.length}`);
 
+      let globalChunkIndex = 0;
       let saved = 0;
       let failed = 0;
       let skipped = 0;
       let firstPostError: unknown = undefined;
 
-      for (const [index, chunk] of chunks.entries()) {
-        const content = cleanChunkText(chunk.pageContent);
+      for (const section of sections) {
+        const sectionChunks = await splitter.createDocuments([section.content]);
 
-        // Validación semántica del chunk
-        if (!isValidChunk(content)) {
-          skipped++;
-          continue;
-        }
+        for (const chunk of sectionChunks) {
+          const chunkText = cleanChunkText(chunk.pageContent);
 
-        // Deduplicación por hash (en memoria + DB)
-        const contentHash = hashContent(content);
-        if (processedHashes.has(contentHash)) {
-          skipped++;
-          continue;
-        }
+          // Validación semántica del chunk (sin el prefijo de contexto)
+          if (!isValidChunk(chunkText)) {
+            skipped++;
+            globalChunkIndex++;
+            continue;
+          }
 
-        // Verificar si ya existe en la base de datos
-        if (await existsInDb(contentHash)) {
+          // Prepend documento + sección para que el chunk sea autocontenido
+          const contextPrefix = `Documento: ${fileInfo.description}\nSección: ${section.header}\n\n`;
+          const content = contextPrefix + chunkText;
+
+          // Deduplicación por hash (en memoria + DB)
+          const contentHash = hashContent(content);
+          if (processedHashes.has(contentHash)) {
+            skipped++;
+            globalChunkIndex++;
+            continue;
+          }
+
+          // Verificar si ya existe en la base de datos
+          if (await existsInDb(contentHash)) {
+            processedHashes.add(contentHash);
+            skipped++;
+            globalChunkIndex++;
+            continue;
+          }
           processedHashes.add(contentHash);
-          skipped++;
-          continue;
-        }
-        processedHashes.add(contentHash);
 
-        const payload = {
-          content,
-          source: fileInfo.source,
-          metadata: {
-            filename: fileInfo.name,
-            priority: fileInfo.priority,
-            chunkIndex: index,
-            contentHash,
-          },
-        };
+          const payload = {
+            content,
+            source: fileInfo.source,
+            metadata: {
+              filename: fileInfo.name,
+              priority: fileInfo.priority,
+              chunkIndex: globalChunkIndex,
+              sectionHeader: section.header,
+              contentHash,
+            },
+          };
 
-        try {
-          await postWithRetry(payload);
-          process.stdout.write('.');
-          saved++;
-        } catch (error: unknown) {
-          process.stdout.write('x');
-          failed++;
-          if (firstPostError === undefined) firstPostError = error;
+          try {
+            await postWithRetry(payload);
+            process.stdout.write('.');
+            saved++;
+          } catch (error: unknown) {
+            process.stdout.write('x');
+            failed++;
+            if (firstPostError === undefined) firstPostError = error;
+          }
+
+          globalChunkIndex++;
         }
       }
 
+      const totalProcessed = saved + failed + skipped;
       console.log(
-        `\n   ✅ Guardados ${saved} fragmentos de ${fileInfo.source}${skipped > 0 ? ` (${skipped} saltados por filtro/duplicados)` : ''}.`,
+        `\n   ✅ Guardados ${saved} fragmentos de ${fileInfo.source}${skipped > 0 ? ` (${skipped}/${totalProcessed} saltados)` : ''}.`,
       );
       if (failed > 0) {
         if (

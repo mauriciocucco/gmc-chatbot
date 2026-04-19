@@ -21,7 +21,10 @@
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:create": "npm run typeorm -- migration:create",
     "migration:run": "npm run typeorm -- migration:run -d typeorm.config.ts",
-    "migration:revert": "npm run typeorm -- migration:revert -d typeorm.config.ts"
+    "migration:revert": "npm run typeorm -- migration:revert -d typeorm.config.ts",
+    "eval:generate": "npx ts-node scripts/generate-evals.ts",
+    "eval:run": "npx ts-node scripts/run-eval.ts",
+    "eval:answers": "npx ts-node scripts/run-answer-eval.ts"
   },
   "dependencies": {
     "@langchain/community": "^1.1.1",

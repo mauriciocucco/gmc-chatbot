@@ -1,0 +1,632 @@
+[
+  {
+    "question": "¿Por qué el alcohol aumenta el riesgo de accidentes?",
+    "expectedChunkIds": [
+      "f05eeda1-5958-45d1-ac65-80befc6f0764"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Quiénes son los que más riesgo corren al manejar después de tomar alcohol, según el texto?",
+    "expectedChunkIds": [
+      "f05eeda1-5958-45d1-ac65-80befc6f0764"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿En qué lugares se van a usar los instrumentos para controlar las infracciones?",
+    "expectedChunkIds": [
+      "4ec41e7a-e464-4650-9d90-07b307eea86b"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Quién debe autorizar el uso de los instrumentos para controlar las infracciones?",
+    "expectedChunkIds": [
+      "4ec41e7a-e464-4650-9d90-07b307eea86b"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Qué porcentaje de los siniestros viales son causados por el conductor?",
+    "expectedChunkIds": [
+      "8e63b223-f78c-460b-94c3-41a017738312"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Dónde se concentra la mayor cantidad de siniestros viales en la provincia de Buenos Aires?",
+    "expectedChunkIds": [
+      "8e63b223-f78c-460b-94c3-41a017738312"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Qué tipo de información obtienen las cámaras y sensores?",
+    "expectedChunkIds": [
+      "2a19dc13-297f-45bd-ae8e-a5beecd819a0"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Quiénes adoptan las soluciones ante incidentes detectados por las cámaras y sensores?",
+    "expectedChunkIds": [
+      "2a19dc13-297f-45bd-ae8e-a5beecd819a0"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Qué es lo que garantiza la Constitución Nacional en relación a la circulación?",
+    "expectedChunkIds": [
+      "f74f908d-692c-4544-b96f-836f8293edfb"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Cuál es el objetivo principal de las normativas de tránsito?",
+    "expectedChunkIds": [
+      "f74f908d-692c-4544-b96f-836f8293edfb"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Por qué es especialmente grave un accidente para un motociclista?",
+    "expectedChunkIds": [
+      "c5b3e707-1f37-4c04-ad6b-7bc0e23fb0a1"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Qué tipo de protección tiene un motociclista en caso de accidente, según este texto?",
+    "expectedChunkIds": [
+      "c5b3e707-1f37-4c04-ad6b-7bc0e23fb0a1"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Qué requisitos te pide el municipio para sacar la licencia?",
+    "expectedChunkIds": [
+      "229b21eb-7589-4b5d-935e-f95fd01333e2"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Quién te pide los requisitos para sacar la licencia de conducir?",
+    "expectedChunkIds": [
+      "229b21eb-7589-4b5d-935e-f95fd01333e2"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿A qué distancia de la vía te vas a encontrar la señal preventiva de advertencia de un cruce ferroviario?",
+    "expectedChunkIds": [
+      "15b78dd6-3ddd-4934-9bef-e494f5371542"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Qué indican las barreras bajas en un cruce ferroviario?",
+    "expectedChunkIds": [
+      "15b78dd6-3ddd-4934-9bef-e494f5371542"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Cuánto tiempo tarda, aproximadamente, en adaptarse a la oscuridad la visión?",
+    "expectedChunkIds": [
+      "afaa613a-e800-46f1-aae1-4d7f1a692b5b"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿A qué distancia podría leer un cartel un conductor con problemas de visión, en comparación con uno normal?",
+    "expectedChunkIds": [
+      "afaa613a-e800-46f1-aae1-4d7f1a692b5b"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Qué te pueden hacer si causás un accidente grave con heridos o muertos?",
+    "expectedChunkIds": [
+      "be585803-cf0a-479e-89df-36041745e755"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Qué pasa con la licencia si te encuentran manejando drogado o alcoholizado?",
+    "expectedChunkIds": [
+      "be585803-cf0a-479e-89df-36041745e755"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Quiénes están obligados a usar casco en la moto?",
+    "expectedChunkIds": [
+      "e5dac385-551f-4af6-a419-1f8e05415b15"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Son obligatorios los anteojos para el pasajero de la moto?",
+    "expectedChunkIds": [
+      "e5dac385-551f-4af6-a419-1f8e05415b15"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Qué pasa si tenés la VTV vencida y te paran en un control?",
+    "expectedChunkIds": [
+      "4c01f5a3-77ec-47c2-83ba-f3b8721c0898"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Qué pasa si vas a hacer la VTV después de que se te venció el plazo, pero te presentás espontáneamente?",
+    "expectedChunkIds": [
+      "4c01f5a3-77ec-47c2-83ba-f3b8721c0898"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿A partir de qué fecha está vigente la prohibición de usar auriculares mientras manejás?",
+    "expectedChunkIds": [
+      "34f0d95e-614b-4daa-b815-63ea103652ca"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Está prohibido transportar menores de 10 años en el asiento delantero del auto?",
+    "expectedChunkIds": [
+      "34f0d95e-614b-4daa-b815-63ea103652ca"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Cuáles son los dos tipos de ciclos de tiempo que usan los semáforos?",
+    "expectedChunkIds": [
+      "37e1055e-aa19-4f6b-8f26-80615ab07a9f"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Cómo afecta el ancho de la calle a la duración de la luz verde del semáforo?",
+    "expectedChunkIds": [
+      "37e1055e-aa19-4f6b-8f26-80615ab07a9f"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿Quién tiene prioridad de paso en una rotonda, el que está circulando o el que quiere entrar?",
+    "expectedChunkIds": [
+      "b0cba960-1137-4719-bab0-721f6de2c37a"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿A qué velocidad máxima tenés que ir cuando estás por entrar a una rotonda?",
+    "expectedChunkIds": [
+      "b0cba960-1137-4719-bab0-721f6de2c37a"
+    ],
+    "source": "manual_pba"
+  },
+  {
+    "question": "¿A qué velocidad máxima tenés que ir en las curvas según esta ley?",
+    "expectedChunkIds": [
+      "f513fafc-369f-4615-bfc1-e62d52df7713"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Qué tenés que hacer antes de cruzar un río con el auto según la ley?",
+    "expectedChunkIds": [
+      "f513fafc-369f-4615-bfc1-e62d52df7713"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Qué problemas te puede causar tener los amortiguadores en mal estado?",
+    "expectedChunkIds": [
+      "25b8bee9-489d-49e5-a4d7-7459fece80b3"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Cómo puedo darme cuenta si los amortiguadores traseros de mi auto están en mal estado?",
+    "expectedChunkIds": [
+      "25b8bee9-489d-49e5-a4d7-7459fece80b3"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Qué pasa si tenés la licencia retenida y querés hacer el trámite del CENAT?",
+    "expectedChunkIds": [
+      "d66ac04e-7e9e-461e-ba02-092d9a2154e5"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Qué te va a exigir el Centro de Emisión de Licencias si tenés la licencia retenida?",
+    "expectedChunkIds": [
+      "d66ac04e-7e9e-461e-ba02-092d9a2154e5"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Cuántos módulos tiene el Curso Nacional de Educación Vial?",
+    "expectedChunkIds": [
+      "41a03544-dc86-4549-8265-b1dace6f150b"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿El curso para sacar la Licencia Nacional de Conducir es pago o gratuito?",
+    "expectedChunkIds": [
+      "41a03544-dc86-4549-8265-b1dace6f150b"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Cuándo tenés que reducir la marcha al usar el freno motor?",
+    "expectedChunkIds": [
+      "c247be7c-7e7a-4820-a474-f8ebdd86397c"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Qué ventajas tiene usar el freno motor?",
+    "expectedChunkIds": [
+      "c247be7c-7e7a-4820-a474-f8ebdd86397c"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿A qué velocidad máxima puedo circular en una zona urbana?",
+    "expectedChunkIds": [
+      "491ed8ea-ce0f-476d-a38d-982c866f16d5"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿A qué velocidad máxima tengo que ir en una ruta de noche?",
+    "expectedChunkIds": [
+      "491ed8ea-ce0f-476d-a38d-982c866f16d5"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿En qué sección de la Ley Nacional de Tránsito puedo encontrar las señales reglamentarias?",
+    "expectedChunkIds": [
+      "20c56be5-2987-45e2-9128-49aecbc05ac6"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Cuántas páginas tiene el documento que estoy leyendo en este momento?",
+    "expectedChunkIds": [
+      "20c56be5-2987-45e2-9128-49aecbc05ac6"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿A qué velocidad se acciona el airbag al chocar contra un obstáculo deformable?",
+    "expectedChunkIds": [
+      "6c797fb6-87e2-4956-b1d1-171c93877ca8"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Qué tipo de seguridad es el airbag, activa o pasiva?",
+    "expectedChunkIds": [
+      "6c797fb6-87e2-4956-b1d1-171c93877ca8"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Qué son los puntos ciegos y por qué son importantes?",
+    "expectedChunkIds": [
+      "fad1ad9e-2453-4874-8115-f90d2b8f31c5"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Cómo tenés que ajustar los espejos exteriores para reducir los puntos ciegos?",
+    "expectedChunkIds": [
+      "fad1ad9e-2453-4874-8115-f90d2b8f31c5"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿A qué distancia antes de hacer un giro tenés que empezar a señalizarlo?",
+    "expectedChunkIds": [
+      "bedd9751-bcdd-4af1-a149-58172a6f4ec2"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Qué tenés que hacer si vas a girar a la izquierda en una calle de doble sentido?",
+    "expectedChunkIds": [
+      "bedd9751-bcdd-4af1-a149-58172a6f4ec2"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Qué se debe hacer si una persona en moto tiene un accidente y el casco le dificulta respirar?",
+    "expectedChunkIds": [
+      "0338dfc1-62f6-4ccb-970f-3c47f21c3dcc"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Qué medidas se deben tomar si una persona está en estado de shock después de un accidente?",
+    "expectedChunkIds": [
+      "0338dfc1-62f6-4ccb-970f-3c47f21c3dcc"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿En qué sección de la Ley Nacional de Tránsito puedo encontrar información sobre las maniobras de giro?",
+    "expectedChunkIds": [
+      "3c11ece8-aab2-402f-9c9b-f0a23b9f0b01"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Qué tipo de maniobras se mencionan además de las de giro en este fragmento?",
+    "expectedChunkIds": [
+      "3c11ece8-aab2-402f-9c9b-f0a23b9f0b01"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Qué factores, según el texto, influyen en el consumo de combustible?",
+    "expectedChunkIds": [
+      "e083228a-e549-4c55-8283-578e058ce1af"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Por qué es importante revisar la presión de los neumáticos para ahorrar combustible y evitar accidentes?",
+    "expectedChunkIds": [
+      "e083228a-e549-4c55-8283-578e058ce1af"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Qué tipo de cinturones de seguridad deben tener los asientos delanteros?",
+    "expectedChunkIds": [
+      "5332ad72-5747-48e0-b721-cc70608b14ff"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Por qué es importante usar el cinturón de seguridad junto con el airbag?",
+    "expectedChunkIds": [
+      "5332ad72-5747-48e0-b721-cc70608b14ff"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Qué cosas puedo revisar semanalmente en mi auto?",
+    "expectedChunkIds": [
+      "019f5507-a248-415a-9f08-d70c69afe892"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Qué tengo que hacer para revisar el líquido de transmisión?",
+    "expectedChunkIds": [
+      "019f5507-a248-415a-9f08-d70c69afe892"
+    ],
+    "source": "cnev_nacional"
+  },
+  {
+    "question": "¿Qué tenés que hacer ante una señal de pare?",
+    "expectedChunkIds": [
+      "87a4219b-c0ec-444b-ab77-a6bd1f7498c8"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Qué indica un semáforo con luz intermitente roja según el texto?",
+    "expectedChunkIds": [
+      "87a4219b-c0ec-444b-ab77-a6bd1f7498c8"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Qué tenés que hacer si ves a una peatona cruzando la calle en una intersección?",
+    "expectedChunkIds": [
+      "fa84db58-9acf-4367-925b-f8632612db30"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Qué opción describe mejor qué tenés que hacer si la peatona está cruzando, aunque tu vehículo obstaculice el flujo vehicular?",
+    "expectedChunkIds": [
+      "fa84db58-9acf-4367-925b-f8632612db30"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Qué tipo de vehículos pueden transportar cargas indivisibles con saliente trasera de hasta un metro sin permiso?",
+    "expectedChunkIds": [
+      "40412be6-8a92-488c-9d39-a13f9fd4fffc"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Cuál es la hora máxima permitida para circular con vehículos que tienen saliente?",
+    "expectedChunkIds": [
+      "40412be6-8a92-488c-9d39-a13f9fd4fffc"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Es obligatorio que cada pregunta del examen sea Verdadero o Falso?",
+    "expectedChunkIds": [
+      "183a37a7-2112-4bce-b2ed-96bf4c16964c"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Dónde puedo encontrar más preguntas para el examen de conducir?",
+    "expectedChunkIds": [
+      "183a37a7-2112-4bce-b2ed-96bf4c16964c"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Qué se debe hacer si no hay posibilidad de circular por la niebla?",
+    "expectedChunkIds": [
+      "7ffe1af1-c164-49c8-8488-75790db1df7e"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Qué factores de riesgo modifica la niebla?",
+    "expectedChunkIds": [
+      "7ffe1af1-c164-49c8-8488-75790db1df7e"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿En qué casos podés adelantar por la derecha?",
+    "expectedChunkIds": [
+      "37c75eda-6c87-4d1d-9182-1d0d8b3695c3"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Cómo tenés que avisarle a otro auto que lo vas a adelantar?",
+    "expectedChunkIds": [
+      "37c75eda-6c87-4d1d-9182-1d0d8b3695c3"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Qué tipo de estacionamiento indica la letra 'A' en la batería de preguntas?",
+    "expectedChunkIds": [
+      "83dd9e10-dc5f-4c1b-b5b0-2b93a1fc9129"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Para qué sirve la demarcación horizontal de color amarillo que se visualiza en la imagen que te muestran en el examen?",
+    "expectedChunkIds": [
+      "83dd9e10-dc5f-4c1b-b5b0-2b93a1fc9129"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Qué tipo de certificado deben tener los conductores que transportan mercancías peligrosas, además de las habilitaciones de tránsito?",
+    "expectedChunkIds": [
+      "6724db73-9280-4416-817b-ec3dd54f5145"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Cuántos pasajeros, además del personal del vehículo, se pueden transportar en unidades con mercancías peligrosas?",
+    "expectedChunkIds": [
+      "6724db73-9280-4416-817b-ec3dd54f5145"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Qué vehículos tienen prioridad de paso?",
+    "expectedChunkIds": [
+      "6369b249-86bf-418c-977f-b8014984030d"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Cuál es la tolerancia de alcohol en sangre para un conductor de ambulancia en Argentina?",
+    "expectedChunkIds": [
+      "6369b249-86bf-418c-977f-b8014984030d"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Qué se recomienda hacer si el auto se te queda parado en la autopista por un desperfecto?",
+    "expectedChunkIds": [
+      "c1b6f264-d016-4624-a371-9d8427b2febc"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Es obligatorio presentarse a declarar en la fiscalía si te convocan como testigo en un choque?",
+    "expectedChunkIds": [
+      "c1b6f264-d016-4624-a371-9d8427b2febc"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Qué tenés que hacer, según el texto, al llegar a una intersección con una señal de tránsito?",
+    "expectedChunkIds": [
+      "6f717fb3-eaf9-48ef-9cc1-8c1257c79590"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Cómo tenés que actuar, según el texto, frente a una señal horizontal?",
+    "expectedChunkIds": [
+      "6f717fb3-eaf9-48ef-9cc1-8c1257c79590"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Qué se debe hacer al ver el símbolo de un carril de emergencias y una ambulancia acercándose?",
+    "expectedChunkIds": [
+      "b28c68d1-f565-464e-acee-5d40a7ebb10e"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Es correcto aumentar la velocidad para no ser un obstáculo a un vehículo de emergencia?",
+    "expectedChunkIds": [
+      "b28c68d1-f565-464e-acee-5d40a7ebb10e"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Dónde tenés que detenerte ante un semáforo con luz roja?",
+    "expectedChunkIds": [
+      "d96f9451-c375-4a2b-bd62-ffb9624244ae"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Cuáles son los elementos de seguridad esenciales y obligatorios?",
+    "expectedChunkIds": [
+      "d96f9451-c375-4a2b-bd62-ffb9624244ae"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Qué tipo de gases indica la señal del ejercicio 407?",
+    "expectedChunkIds": [
+      "127155ed-9cd4-488f-8113-29054ae660f2"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Qué indica la señal del ejercicio 408?",
+    "expectedChunkIds": [
+      "127155ed-9cd4-488f-8113-29054ae660f2"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Qué acción indica la seña que involucra las opciones A, B y C?",
+    "expectedChunkIds": [
+      "e447865a-7bb1-42cc-8cb6-67c5b5d10f11"
+    ],
+    "source": "bateria_preguntas"
+  },
+  {
+    "question": "¿Hacia qué lado tenés que mirar si querés cruzar la intersección?",
+    "expectedChunkIds": [
+      "e447865a-7bb1-42cc-8cb6-67c5b5d10f11"
+    ],
+    "source": "bateria_preguntas"
+  }
+]

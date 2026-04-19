@@ -4,7 +4,9 @@ import {
   HttpException,
   HttpStatus,
   Inject,
+  OnModuleInit,
 } from '@nestjs/common';
+import axios from 'axios';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -13,6 +15,13 @@ import { KnowledgeEntry } from './entities/knowledge-entry.entity';
 
 /** Dimensión por defecto para text-embedding-3-small */
 const DEFAULT_EMBEDDING_DIMENSION = 1536;
+
+/** Candidatos recuperados antes de reranquear (cast wide net) */
+const RERANKER_CANDIDATE_COUNT = 15;
+/** Top-k final que pasa al prompt del LLM */
+const RERANKER_TOP_K = 5;
+/** Timeout para la llamada al reranker (ms). Agresivo para proteger el budget de WhatsApp */
+const RERANKER_TIMEOUT_MS = 5_000;
 
 /** Resultado de la query híbrida de búsqueda de conocimiento */
 interface HybridSearchResult {
@@ -42,7 +51,7 @@ import { PromptTemplate } from '@langchain/core/prompts';
  * - qwen/qwen-2.5-72b-instruct  → Buen español
  */
 @Injectable()
-export class KnowledgeService {
+export class KnowledgeService implements OnModuleInit {
   private readonly logger = new Logger(KnowledgeService.name);
   private embeddingsModel: OpenAIEmbeddings;
   private chatModel: ChatOpenAI;
@@ -57,6 +66,12 @@ export class KnowledgeService {
   // Timeout para LLM (WhatsApp tiene timeouts estrictos)
   private readonly LLM_TIMEOUT_MS = 30_000;
   private readonly LLM_MAX_RETRIES = 2;
+
+  // Reranker config
+  private readonly rerankerEnabled: boolean;
+  private readonly hfApiKey: string | undefined;
+  private readonly rerankerEndpoint: string;
+  private warmupIntervalRef?: NodeJS.Timeout;
 
   constructor(
     @InjectRepository(KnowledgeEntry)
@@ -122,6 +137,54 @@ export class KnowledgeService {
     this.logger.log(
       `🧠 Chat model: ${chatModel} (timeout=${this.LLM_TIMEOUT_MS}ms, retries=${this.LLM_MAX_RETRIES})`,
     );
+
+    // Reranker: habilitado con RERANKER_ENABLED=true en .env
+    this.rerankerEnabled =
+      this.configService.get<string>('RERANKER_ENABLED') === 'true';
+    this.hfApiKey = this.configService.get<string>('HF_API_KEY');
+    const rerankerModel =
+      this.configService.get<string>('RERANKER_MODEL') ??
+      'BAAI/bge-reranker-v2-m3';
+    this.rerankerEndpoint = `https://api-inference.huggingface.co/models/${rerankerModel}`;
+
+    if (this.rerankerEnabled) {
+      this.logger.log(
+        `🔀 Reranker habilitado: ${rerankerModel} (timeout=${RERANKER_TIMEOUT_MS}ms, top_k=${RERANKER_TOP_K})`,
+      );
+      if (!this.hfApiKey) {
+        this.logger.warn(
+          '⚠️ RERANKER_ENABLED=true pero HF_API_KEY no está configurado. Reranker desactivado.',
+        );
+      }
+    }
+  }
+
+  onModuleInit(): void {
+    if (!this.rerankerEnabled || !this.hfApiKey) return;
+
+    // Warmup periódico: mantiene el modelo HF despierto para evitar cold starts de 10-30s
+    this.warmupIntervalRef = setInterval(
+      () => {
+        void axios
+          .post(
+            this.rerankerEndpoint,
+            { inputs: [['warmup', 'warmup']] },
+            {
+              headers: {
+                Authorization: `Bearer ${this.hfApiKey}`,
+                'Content-Type': 'application/json',
+              },
+              timeout: RERANKER_TIMEOUT_MS,
+            },
+          )
+          .catch(() => {
+            // Silent fail — el warmup es best-effort
+          });
+      },
+      5 * 60 * 1000,
+    ); // cada 5 minutos
+
+    this.logger.log('🔥 Warmup periódico del reranker activado (cada 5 min)');
   }
 
   async addKnowledgeEntry(
@@ -398,19 +461,117 @@ export class KnowledgeService {
     return embedding;
   }
 
-  async ask(userQuery: string): Promise<string> {
-    // Buscamos en la nueva tabla unificada
-    const relevantDocs = await this.searchKnowledge(userQuery);
+  /**
+   * Re-rankea una lista de documentos candidatos usando un cross-encoder de HuggingFace.
+   * Si el reranker está deshabilitado, falla o excede el timeout, devuelve los candidatos
+   * en su orden original (top K).
+   */
+  async rerankResults(
+    query: string,
+    candidates: KnowledgeEntry[],
+  ): Promise<KnowledgeEntry[]> {
+    if (!this.rerankerEnabled || !this.hfApiKey || candidates.length === 0) {
+      return candidates.slice(0, RERANKER_TOP_K);
+    }
 
-    if (relevantDocs.length === 0) {
+    try {
+      const pairs = candidates.map((doc) => [query, doc.content]);
+
+      const response = await axios.post<number[]>(
+        this.rerankerEndpoint,
+        { inputs: pairs },
+        {
+          headers: {
+            Authorization: `Bearer ${this.hfApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: RERANKER_TIMEOUT_MS,
+        },
+      );
+
+      const scores: number[] = Array.isArray(response.data)
+        ? response.data
+        : [];
+
+      if (scores.length !== candidates.length) {
+        this.logger.warn(
+          `⚠️ Reranker devolvió ${scores.length} scores para ${candidates.length} candidatos. Usando orden original.`,
+        );
+        return candidates.slice(0, RERANKER_TOP_K);
+      }
+
+      const ranked = candidates
+        .map((doc, i) => ({ doc, score: scores[i] ?? 0 }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, RERANKER_TOP_K)
+        .map((item) => item.doc);
+
+      this.logger.debug(
+        `🔀 Reranker: ${candidates.length} candidatos → top ${ranked.length} (top score=${(scores[0] ?? 0).toFixed(3)})`,
+      );
+
+      return ranked;
+    } catch (error) {
+      const err = error as Error;
+      this.logger.warn(
+        `⚠️ Reranker falló (fallback a orden original): ${err.message}`,
+      );
+      return candidates.slice(0, RERANKER_TOP_K);
+    }
+  }
+
+  async ask(userQuery: string): Promise<string> {
+    const { docs } = await this.retrieveAndRerank(userQuery);
+
+    if (docs.length === 0) {
       return 'Lo siento, no tengo información sobre eso en mis manuales. 🤷‍♂️';
     }
 
-    const contextText = relevantDocs
+    const contextText = docs
       .map((doc) => `[FUENTE: ${doc.source}] ${doc.content}`)
       .join('\n\n');
 
     return this.generateResponse(userQuery, contextText);
+  }
+
+  /**
+   * Versión de ask() que también expone el contexto recuperado.
+   * Usada por el endpoint /ask-with-context para evaluaciones LLM-as-judge.
+   */
+  async askWithContext(
+    userQuery: string,
+  ): Promise<{ answer: string; context: KnowledgeEntry[] }> {
+    const { docs } = await this.retrieveAndRerank(userQuery);
+
+    if (docs.length === 0) {
+      return {
+        answer: 'Lo siento, no tengo información sobre eso en mis manuales. 🤷‍♂️',
+        context: [],
+      };
+    }
+
+    const contextText = docs
+      .map((doc) => `[FUENTE: ${doc.source}] ${doc.content}`)
+      .join('\n\n');
+
+    const answer = await this.generateResponse(userQuery, contextText);
+    return { answer, context: docs };
+  }
+
+  /**
+   * Paso de búsqueda + reranking compartido entre ask() y askWithContext().
+   * Busca más candidatos cuando el reranker está activo para luego filtrar.
+   */
+  private async retrieveAndRerank(
+    userQuery: string,
+  ): Promise<{ docs: KnowledgeEntry[] }> {
+    const candidateCount = this.rerankerEnabled
+      ? RERANKER_CANDIDATE_COUNT
+      : RERANKER_TOP_K;
+
+    const candidates = await this.searchKnowledge(userQuery, candidateCount);
+    const docs = await this.rerankResults(userQuery, candidates);
+    return { docs };
   }
 
   private async generateResponse(

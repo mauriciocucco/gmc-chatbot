@@ -1,9 +1,16 @@
+/**
+ * Regenera las preguntas de evaluación para un source específico,
+ * preservando las preguntas de los otros sources.
+ *
+ * Uso: npx ts-node scripts/regen-source-evals.ts --source=manual_pba
+ */
 import axios from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
 import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import { join } from 'path';
+import type { EvalQuestion } from './generate-evals';
 
 config({ path: path.join(__dirname, '../.env') });
 
@@ -13,14 +20,20 @@ const EVAL_DATA_DIR = path.join(__dirname, 'eval-data');
 const OUTPUT_FILE = path.join(EVAL_DATA_DIR, 'eval-questions.json');
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-/** Chunks sampled per source — balances coverage vs. costo de API */
 const SAMPLES_PER_SOURCE = 15;
-/** Preguntas generadas por chunk */
 const QUESTIONS_PER_CHUNK = 2;
-/** Delay entre llamadas al LLM para no saturar rate limits */
 const DELAY_BETWEEN_CALLS_MS = 250;
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
+// ── Parse CLI arg ─────────────────────────────────────────────────────────────
+
+const sourceArg = process.argv.find((a) => a.startsWith('--source='));
+if (!sourceArg) {
+  console.error('❌ Debes especificar un source: --source=manual_pba');
+  process.exit(1);
+}
+const TARGET_SOURCE = sourceArg.split('=')[1];
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface KnowledgeEntryRow {
   id: string;
@@ -28,20 +41,16 @@ interface KnowledgeEntryRow {
   source: string;
 }
 
-export interface EvalQuestion {
-  question: string;
-  expectedChunkIds: string[];
-  source: string;
-}
-
 interface LlmQuestionResponse {
   questions: string[];
 }
 
-/**
- * Palabras clave que indican preguntas meta (sobre el documento en sí,
- * no sobre el contenido de conducción). Se descartan antes de guardar.
- */
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 const META_QUESTION_PATTERNS = [
   /\bdocumento\b/i,
   /\bfragmento\b/i,
@@ -59,24 +68,14 @@ const META_QUESTION_PATTERNS = [
   /cuantas.*paginas/i,
 ];
 
-/** Devuelve true si la pregunta hace referencia al documento en sí. */
 function isMetaQuestion(question: string): boolean {
   return META_QUESTION_PATTERNS.some((pattern) => pattern.test(question));
 }
 
-/**
- * Extrae preguntas del texto raw devuelto por el LLM.
- * Estrategia 1: parsear JSON (con limpieza de trailing commas).
- * Estrategia 2: regex sobre strings entre comillas que parezcan preguntas.
- * Nunca lanza error — devuelve array vacío en el peor caso.
- */
 function parseQuestionsFromRaw(raw: string): string[] {
-  // Extraer el bloque JSON si existe
   const jsonMatch = raw.match(/\{[\s\S]*\}/);
-
   if (jsonMatch) {
     try {
-      // Limpiar trailing commas antes de ] o }
       const cleaned = jsonMatch[0].replace(/,\s*([\]}])/g, '$1');
       const parsed = JSON.parse(cleaned) as LlmQuestionResponse;
       if (Array.isArray(parsed.questions)) {
@@ -86,23 +85,13 @@ function parseQuestionsFromRaw(raw: string): string[] {
         );
       }
     } catch {
-      // Fallback a regex
+      // fallback to regex
     }
   }
-
-  // Fallback: extraer strings entrecomilladas que contengan '?'
   const matches = raw.matchAll(/"([^"\\]*(?:\\.[^"\\]*)*\?[^"\\]*)"/g);
-  const questions = [...matches]
+  return [...matches]
     .map((m) => m[1].replace(/\\n/g, ' ').replace(/\\"/, '"').trim())
     .filter((q) => q.length > 5 && !isMetaQuestion(q));
-
-  return questions;
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function buildDataSource(): DataSource {
@@ -124,25 +113,18 @@ function buildDataSource(): DataSource {
 
 async function sampleChunks(
   db: DataSource,
-  sources: string[],
-  samplesPerSource: number,
+  source: string,
+  limit: number,
 ): Promise<KnowledgeEntryRow[]> {
-  const rows: KnowledgeEntryRow[] = [];
-
-  for (const source of sources) {
-    const result = await db.query<KnowledgeEntryRow[]>(
-      `SELECT id, content, source
-       FROM knowledge_entries
-       WHERE source = $1
-       ORDER BY RANDOM()
-       LIMIT $2`,
-      [source, samplesPerSource],
-    );
-
-    rows.push(...result);
-  }
-
-  return rows;
+  const result = await db.query<KnowledgeEntryRow[]>(
+    `SELECT id, content, source
+     FROM knowledge_entries
+     WHERE source = $1
+     ORDER BY RANDOM()
+     LIMIT $2`,
+    [source, limit],
+  );
+  return result;
 }
 
 async function generateQuestionsForChunk(
@@ -187,58 +169,59 @@ Respondé ÚNICAMENTE con un JSON válido con este formato exacto:
   );
 
   const rawContent = response.data.choices[0]?.message?.content ?? '';
-
   return parseQuestionsFromRaw(rawContent);
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-async function generateEvals(): Promise<void> {
+async function main(): Promise<void> {
   const openRouterKey = process.env.OPENROUTER_API_KEY;
-
   if (!openRouterKey) {
     console.error('❌ OPENROUTER_API_KEY no está configurado en .env');
-    process.exitCode = 1;
-    return;
+    process.exit(1);
   }
 
   const model = process.env.CHAT_MODEL ?? 'google/gemini-flash-1.5';
 
-  console.log('🔌 Conectando a la base de datos...');
+  // 1. Load existing questions, keep only non-target sources
+  let existingQuestions: EvalQuestion[] = [];
+  if (fs.existsSync(OUTPUT_FILE)) {
+    existingQuestions = JSON.parse(
+      fs.readFileSync(OUTPUT_FILE, 'utf-8'),
+    ) as EvalQuestion[];
+  }
 
-  const dataSource = buildDataSource();
+  const preserved = existingQuestions.filter((q) => q.source !== TARGET_SOURCE);
+  const removedCount = existingQuestions.length - preserved.length;
 
-  await dataSource.initialize();
+  console.log(
+    `🗑️  Eliminando ${removedCount} preguntas antiguas de source "${TARGET_SOURCE}"...`,
+  );
+  console.log(`✅ Preservando ${preserved.length} preguntas de otros sources.`);
+
+  // 2. Connect to DB
+  console.log('\n🔌 Conectando a la base de datos...');
+  const db = buildDataSource();
+  await db.initialize();
 
   try {
-    const sources = [
-      'manual_pba',
-      'cnev_nacional',
-      'bateria_preguntas',
-      'reglas_locales',
-    ];
-    const chunks = await sampleChunks(dataSource, sources, SAMPLES_PER_SOURCE);
+    const chunks = await sampleChunks(db, TARGET_SOURCE, SAMPLES_PER_SOURCE);
 
     if (chunks.length === 0) {
       console.error(
-        '❌ No se encontraron chunks en la DB. ¿Ejecutaste la ingesta primero?',
+        `❌ No se encontraron chunks para source "${TARGET_SOURCE}". ¿Ejecutaste la ingesta?`,
       );
       return;
     }
 
-    const sourceCounts = sources.map((s) => {
-      const count = chunks.filter((c) => c.source === s).length;
-      return `${s}: ${count}`;
-    });
-
     console.log(
-      `📊 Chunks seleccionados: ${chunks.length} (${sourceCounts.join(', ')})`,
+      `📊 Muestreados ${chunks.length} chunks de "${TARGET_SOURCE}".`,
     );
     console.log(
       `🤖 Generando ${QUESTIONS_PER_CHUNK} preguntas por chunk con ${model}...\n`,
     );
 
-    const evalQuestions: EvalQuestion[] = [];
+    const newQuestions: EvalQuestion[] = [];
     let processed = 0;
 
     for (const chunk of chunks) {
@@ -250,7 +233,7 @@ async function generateEvals(): Promise<void> {
         );
 
         for (const question of questions) {
-          evalQuestions.push({
+          newQuestions.push({
             question,
             expectedChunkIds: [chunk.id],
             source: chunk.source,
@@ -259,50 +242,43 @@ async function generateEvals(): Promise<void> {
 
         processed++;
         process.stdout.write(
-          `\r   Progreso: ${processed}/${chunks.length} chunks (${evalQuestions.length} preguntas generadas)...`,
+          `\r   Progreso: ${processed}/${chunks.length} chunks (${newQuestions.length} preguntas generadas)...`,
         );
 
         await sleep(DELAY_BETWEEN_CALLS_MS);
       } catch (error) {
         const err = error as Error;
-
         console.warn(
           `\n⚠️  Error en chunk ${chunk.id.slice(0, 8)}: ${err.message}`,
         );
       }
     }
 
-    console.log(
-      `\n\n✅ ${evalQuestions.length} preguntas de evaluación generadas.`,
-    );
+    // 3. Merge and save
+    const merged = [...preserved, ...newQuestions];
 
-    if (!fs.existsSync(EVAL_DATA_DIR)) {
-      fs.mkdirSync(EVAL_DATA_DIR, { recursive: true });
-    }
+    fs.writeFileSync(OUTPUT_FILE, JSON.stringify(merged, null, 2), 'utf-8');
 
-    fs.writeFileSync(
-      OUTPUT_FILE,
-      JSON.stringify(evalQuestions, null, 2),
-      'utf-8',
-    );
-    console.log(`💾 Guardado en: ${OUTPUT_FILE}`);
-    console.log('\n📋 Próximos pasos:');
+    const bySource = merged.reduce<Record<string, number>>((acc, q) => {
+      acc[q.source] = (acc[q.source] ?? 0) + 1;
+      return acc;
+    }, {});
+
     console.log(
-      '   1. Revisá algunas preguntas en scripts/eval-data/eval-questions.json',
+      `\n\n✅ ${newQuestions.length} preguntas nuevas generadas para "${TARGET_SOURCE}".`,
     );
-    console.log(
-      '   2. Ejecutá "npm run eval:run" para medir Recall@k (baseline)',
+    console.log(`💾 Total en archivo: ${merged.length} preguntas`);
+    console.log('   Distribución:');
+    Object.entries(bySource).forEach(([src, n]) =>
+      console.log(`     ${src}: ${n}`),
     );
-    console.log('   3. Re-ingestá con el nuevo chunking contextual');
-    console.log(
-      '   4. Volvé a ejecutar "npm run eval:generate" + "npm run eval:run" y compará',
-    );
+    console.log(`\n   Guardado en: ${OUTPUT_FILE}`);
   } finally {
-    await dataSource.destroy();
+    await db.destroy();
   }
 }
 
-void generateEvals().catch((err) => {
+main().catch((err) => {
   console.error(err);
-  process.exitCode = 1;
+  process.exit(1);
 });

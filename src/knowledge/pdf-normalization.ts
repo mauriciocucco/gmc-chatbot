@@ -24,7 +24,9 @@ const SECTION_HEADER_PATTERNS = [
   /^Art(iculo)?\.?\s*\d+/i,
 ];
 
-const SPEED_LIMITS_TABLE_ID = 'manual_pba_speed_limits';
+const MANUAL_PBA_SPEED_LIMITS_TABLE_ID = 'manual_pba_speed_limits';
+const CNEV_REQUIREMENTS_TABLE_ID = 'cnev_requirements';
+const CNEV_URBAN_SPEED_LIMITS_TABLE_ID = 'cnev_urban_speed_limits';
 
 function normalizeForMatch(value: string): string {
   return value
@@ -41,6 +43,7 @@ function titleCase(value: string): string {
 
 function buildTableRow(
   baseHeader: string,
+  tableId: string,
   rowKey: string,
   sectionLabel: string,
   content: string,
@@ -50,7 +53,7 @@ function buildTableRow(
     content,
     metadata: {
       contentType: 'table-row',
-      tableId: SPEED_LIMITS_TABLE_ID,
+      tableId,
       rowKey,
     },
     chunkStrategy: 'single',
@@ -81,99 +84,223 @@ function normalizeManualPbaSpeedLimits(section: Section): NormalizedPdfBlock[] |
   return [
     buildTableRow(
       baseHeader,
+      MANUAL_PBA_SPEED_LIMITS_TABLE_ID,
       'autopista_motos_automoviles',
       'Autopistas - motos y automoviles',
       'En autopistas, la velocidad minima para motos y automoviles es 65 km/h y la maxima es 130 km/h.',
     ),
     buildTableRow(
       baseHeader,
+      MANUAL_PBA_SPEED_LIMITS_TABLE_ID,
       'autopista_omnibus_autocasas',
       'Autopistas - omnibus y autocasas',
       'En autopistas, la velocidad minima para omnibus y autocasas es 65 km/h y la maxima es 100 km/h.',
     ),
     buildTableRow(
       baseHeader,
+      MANUAL_PBA_SPEED_LIMITS_TABLE_ID,
       'autopista_restantes',
       'Autopistas - restantes',
       'En autopistas, para los vehiculos restantes la velocidad minima es 65 km/h y la maxima es la misma que rige para carreteras.',
     ),
     buildTableRow(
       baseHeader,
+      MANUAL_PBA_SPEED_LIMITS_TABLE_ID,
       'paso_nivel_sin_barrera',
       'Pasos a nivel sin barrera ni semaforo',
       'En pasos a nivel sin barrera ni semaforo, la velocidad maxima es 20 km/h y la minima es 10 km/h.',
     ),
     buildTableRow(
       baseHeader,
+      MANUAL_PBA_SPEED_LIMITS_TABLE_ID,
       'urbana_calles',
       'Urbana - calles',
       'En calles, la velocidad maxima es 40 km/h y la minima es 20 km/h.',
     ),
     buildTableRow(
       baseHeader,
+      MANUAL_PBA_SPEED_LIMITS_TABLE_ID,
       'urbana_avenidas',
       'Urbana - avenidas',
       'En avenidas, la velocidad maxima es 60 km/h y la minima es 30 km/h.',
     ),
     buildTableRow(
       baseHeader,
+      MANUAL_PBA_SPEED_LIMITS_TABLE_ID,
       'urbana_vias_semaforizadas',
       'Urbana - vias semaforizadas',
       'En vias semaforizadas, solo motos y autos pueden circular a velocidad de coordinacion semaforica; la minima es la mitad del maximo habilitado.',
     ),
     buildTableRow(
       baseHeader,
+      MANUAL_PBA_SPEED_LIMITS_TABLE_ID,
       'urbana_intersecciones',
       'Urbana - intersecciones',
       'En intersecciones, la velocidad maxima es 30 km/h y la minima es 15 km/h.',
     ),
     buildTableRow(
       baseHeader,
+      MANUAL_PBA_SPEED_LIMITS_TABLE_ID,
       'urbana_establecimientos_alta_concentracion',
       'Urbana - establecimientos de alta concentracion',
       'En establecimientos de alta concentracion de personas, como escuelas, cines y estadios, la velocidad maxima es 20 km/h y la minima es 10 km/h.',
     ),
     buildTableRow(
       baseHeader,
+      MANUAL_PBA_SPEED_LIMITS_TABLE_ID,
       'urbana_rutas_que_cruzan',
       'Urbana - rutas que cruzan',
       'En rutas que cruzan zonas urbanas, la velocidad maxima es 60 km/h y la minima es 30 km/h.',
     ),
     buildTableRow(
       baseHeader,
+      MANUAL_PBA_SPEED_LIMITS_TABLE_ID,
       'rural_carreteras_motos_automoviles',
       'Rural - carreteras - motos y automoviles',
-      'En carreteras o caminos comunes, la velocidad maxima para motos y automoviles es 110 km/h y la minima general es 40 km/h, salvo maquinaria especial.',
+      'En rutas, carreteras o caminos comunes, la velocidad maxima para motos y automoviles es 110 km/h y la minima general es 40 km/h, salvo maquinaria especial.',
     ),
     buildTableRow(
       baseHeader,
+      MANUAL_PBA_SPEED_LIMITS_TABLE_ID,
       'rural_carreteras_camionetas_micros_casas',
       'Rural - carreteras - camionetas, micros-buses y casas autopropulsadas',
-      'En carreteras o caminos comunes, la velocidad maxima para camionetas, micros-buses y casas autopropulsadas es 90 km/h y la minima general es 40 km/h, salvo maquinaria especial.',
+      'En rutas, carreteras o caminos comunes, la velocidad maxima para camionetas, micros-buses y casas autopropulsadas es 90 km/h y la minima general es 40 km/h, salvo maquinaria especial.',
     ),
     buildTableRow(
       baseHeader,
+      MANUAL_PBA_SPEED_LIMITS_TABLE_ID,
       'rural_carreteras_camiones_casa_rodante',
       'Rural - carreteras - camiones y autos con casa rodante',
-      'En carreteras o caminos comunes, la velocidad maxima para camiones y autos con casa rodante es 80 km/h y la minima general es 40 km/h, salvo maquinaria especial.',
+      'En rutas, carreteras o caminos comunes, la velocidad maxima para camiones y autos con casa rodante es 80 km/h y la minima general es 40 km/h, salvo maquinaria especial.',
     ),
     buildTableRow(
       baseHeader,
+      MANUAL_PBA_SPEED_LIMITS_TABLE_ID,
       'rural_semiautopista_motos_automoviles',
       'Rural - semiautopistas - motos y automoviles',
       'En semiautopistas o autovias, la velocidad maxima para motos y automoviles es 120 km/h y la minima general es 40 km/h, salvo maquinaria especial.',
     ),
     buildTableRow(
       baseHeader,
+      MANUAL_PBA_SPEED_LIMITS_TABLE_ID,
       'rural_semiautopista_camionetas',
       'Rural - semiautopistas - camionetas',
       'En semiautopistas o autovias, la velocidad maxima para camionetas es 110 km/h y la minima general es 40 km/h, salvo maquinaria especial.',
     ),
     buildTableRow(
       baseHeader,
+      MANUAL_PBA_SPEED_LIMITS_TABLE_ID,
       'rural_semiautopista_restantes',
       'Rural - semiautopistas - restantes',
       'En semiautopistas o autovias, para los vehiculos restantes la velocidad maxima es la misma que en carreteras y la minima general es 40 km/h, salvo maquinaria especial.',
+    ),
+  ];
+}
+
+function normalizeCnevRequirements(section: Section): NormalizedPdfBlock[] | null {
+  const normalizedContent = normalizeForMatch(section.content);
+  const normalizedHeader = normalizeForMatch(section.header);
+  const rows: NormalizedPdfBlock[] = [];
+
+  if (
+    normalizedContent.includes('requisitos para circular en la argentina') &&
+    normalizedContent.includes('el conductor debe portar') &&
+    normalizedContent.includes('comprobante de poliza de seguro vigente')
+  ) {
+    rows.push(
+      buildTableRow(
+        'Requisitos para circular en la Argentina',
+        CNEV_REQUIREMENTS_TABLE_ID,
+        'argentina_documentacion_obligatoria',
+        'Argentina - documentacion obligatoria',
+        'Para circular en la Argentina, el conductor debe portar la licencia habilitante para esa clase de vehiculo, la cedula o documentacion del vehiculo, comprobante de seguro vigente, la patente correctamente colocada y la Revision Tecnica Obligatoria cuando corresponda.',
+      ),
+    );
+  }
+
+  if (
+    (normalizedHeader.includes('cenat') ||
+      normalizedContent.includes('requisitos para circular en el mercosur') ||
+      normalizedContent.includes('circular en el mercosur')) &&
+    normalizedContent.includes('documento de identidad valido para circular en el mercosur') &&
+    normalizedContent.includes('licencia para conducir') &&
+    normalizedContent.includes('titulo u otro documento') &&
+    normalizedContent.includes('comprobante de seguro vigente')
+  ) {
+    rows.push(
+      buildTableRow(
+        'Requisitos para circular en el Mercosur y en el exterior',
+        CNEV_REQUIREMENTS_TABLE_ID,
+        'mercosur_documentacion_obligatoria',
+        'Mercosur - documentacion obligatoria',
+        'Para circular en el Mercosur y en el exterior, el conductor debe portar documento de identidad valido, licencia para conducir, titulo u otro documento oficial que acredite la propiedad del vehiculo y comprobante de seguro vigente.',
+      ),
+    );
+  }
+
+  return rows.length > 0 ? rows : null;
+}
+
+function normalizeCnevUrbanSpeedLimits(section: Section): NormalizedPdfBlock[] | null {
+  const normalizedHeader = normalizeForMatch(section.header);
+  const normalizedContent = normalizeForMatch(section.content);
+
+  if (
+    !normalizedHeader.includes('reglas de velocidades') &&
+    !normalizedContent.includes('reglas de velocidades: limites maximos y minimos de velocidad')
+  ) {
+    return null;
+  }
+
+  const requiredMarkers = [
+    'calles',
+    'avenidas',
+    'vias semaforizadas',
+    'intersecciones',
+    'rutas en zona urbana',
+    'coordinacion semaforica',
+    'mitad del maximo',
+  ];
+
+  if (!requiredMarkers.every((marker) => normalizedContent.includes(marker))) {
+    return null;
+  }
+
+  return [
+    buildTableRow(
+      'Reglas de velocidades: limites maximos y minimos de velocidad',
+      CNEV_URBAN_SPEED_LIMITS_TABLE_ID,
+      'urbana_calles',
+      'Urbana - calles',
+      'Segun la CNEV, en calles la velocidad maxima es 40 km/h y la minima es 20 km/h.',
+    ),
+    buildTableRow(
+      'Reglas de velocidades: limites maximos y minimos de velocidad',
+      CNEV_URBAN_SPEED_LIMITS_TABLE_ID,
+      'urbana_avenidas',
+      'Urbana - avenidas',
+      'Segun la CNEV, en avenidas la velocidad maxima es 60 km/h y la minima es 30 km/h.',
+    ),
+    buildTableRow(
+      'Reglas de velocidades: limites maximos y minimos de velocidad',
+      CNEV_URBAN_SPEED_LIMITS_TABLE_ID,
+      'urbana_vias_semaforizadas',
+      'Urbana - vias semaforizadas',
+      'Segun la CNEV, en vias semaforizadas se puede circular a velocidad de coordinacion semaforica y la minima es la mitad del maximo habilitado.',
+    ),
+    buildTableRow(
+      'Reglas de velocidades: limites maximos y minimos de velocidad',
+      CNEV_URBAN_SPEED_LIMITS_TABLE_ID,
+      'urbana_intersecciones',
+      'Urbana - intersecciones',
+      'Segun la CNEV, en intersecciones la velocidad maxima es 30 km/h y la minima es 15 km/h.',
+    ),
+    buildTableRow(
+      'Reglas de velocidades: limites maximos y minimos de velocidad',
+      CNEV_URBAN_SPEED_LIMITS_TABLE_ID,
+      'urbana_rutas',
+      'Urbana - rutas en zona urbana',
+      'Segun la CNEV, en rutas ubicadas en zona urbana la velocidad maxima es 60 km/h y la minima es 30 km/h.',
     ),
   ];
 }
@@ -249,6 +376,20 @@ export function normalizePdfContent(
       const normalizedTable = normalizeManualPbaSpeedLimits(section);
       if (normalizedTable) {
         blocks.push(...normalizedTable);
+        continue;
+      }
+    }
+
+    if (source === 'cnev_nacional') {
+      const normalizedRequirements = normalizeCnevRequirements(section);
+      if (normalizedRequirements) {
+        blocks.push(...normalizedRequirements);
+        continue;
+      }
+
+      const normalizedUrbanSpeedLimits = normalizeCnevUrbanSpeedLimits(section);
+      if (normalizedUrbanSpeedLimits) {
+        blocks.push(...normalizedUrbanSpeedLimits);
         continue;
       }
     }

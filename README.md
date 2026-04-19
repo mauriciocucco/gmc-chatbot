@@ -2,240 +2,260 @@
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 
-# 🚗 GMC Driving Academy Chatbot
+# GMC Driving Academy Chatbot
 
-> **Asistente Virtual Inteligente para la Academia de Conducción GMC (Villa Gesell)**
+> Asistente virtual para Autoescuela GMC (Villa Gesell) con WhatsApp, RAG hibrido y base de conocimiento propia.
 
-Este proyecto es un chatbot avanzado diseñado para automatizar la atención al alumno, gestionar turnos y responder consultas teóricas y administrativas utilizando Inteligencia Artificial.
+Este proyecto responde consultas teoricas y administrativas de la autoescuela usando un pipeline RAG sobre PostgreSQL + pgvector. La generacion de respuesta corre con modelos via OpenRouter; la recuperacion combina embeddings, full-text search y un reranker opcional.
 
 ---
 
-## 🌟 Características Principales
+## Caracteristicas principales
 
-- **🧠 Inteligencia Artificial Generativa**: Utiliza Modelos de Lenguaje (LLMs) a través de **OpenRouter** (Gemini Flash, Claude Haiku, etc.) para conversaciones naturales y fluidas.
-- **📚 RAG Híbrido (Retrieval-Augmented Generation)**: Sistema de búsqueda avanzado que combina:
-  - **Búsqueda Semántica** (embeddings): Captura el significado y contexto de las consultas.
-  - **Búsqueda Léxica** (full-text): Matchea términos exactos (leyes, siglas, velocidades).
-  - **Vector Database**: PostgreSQL con `pgvector` y HNSW index para embeddings.
-  - **Full-Text Search**: Índices GIN con tsvector para búsqueda textual.
-  - **Embeddings**: OpenAI `text-embedding-3-small` (1536 dimensiones).
-- **🔀 Reranker Cross-Encoder** _(opcional)_: Post-procesamiento de resultados con `BAAI/bge-reranker-v2-m3` vía HuggingFace Inference API. Recupera 15 candidatos y reordena al top 5 más relevante.
-- **📄 Chunking Contextual**: Los PDFs se ingresan con encabezados de sección prepended (`Documento: X\nSección: Y`) para que cada chunk sea autosuficiente semánticamente, mejorando la recuperación en documentos legales.
-- **📱 Integración con WhatsApp**: Comunicación directa con los alumnos a través de la plataforma de mensajería más usada.
-- **📅 Gestión de Turnos**: Módulo para consulta y reserva de clases de manejo (Appointments).
-- **🎓 Seguimiento de Alumnos**: Gestión de perfiles de estudiantes y progreso.
+- IA generativa via OpenRouter para respuestas cortas y conversacionales.
+- RAG hibrido: embeddings + full-text search sobre la misma base.
+- Reranker opcional con `BAAI/bge-reranker-v2-m3` via HuggingFace Inference API.
+- Ingesta de PDFs con chunking contextual por documento y seccion.
+- Normalizacion dirigida de tablas para `manual_pba.pdf`.
+  El cuadro `LIMITES MAXIMOS Y MINIMOS DE VELOCIDAD` se transforma en filas semanticas explicitas para evitar que el PDF linealizado mezcle maximas, minimas y tipos de vehiculo.
+- Normalizacion liviana de queries para retrieval.
+  Ejemplos actuales: `autoposta` -> `autopista`, `semi autopista` -> `semiautopista`.
+- Integracion con WhatsApp para atencion al alumno.
 
-## 📊 Resultados de Evaluación
+## Stack tecnico
 
-Mejoras medidas con el sistema de evaluación Recall@k incluido en este repositorio:
+- Framework: [NestJS](https://nestjs.com/)
+- Base de datos: PostgreSQL + TypeORM + `pgvector`
+- Embeddings: OpenAI `text-embedding-3-small` (1536 dimensiones)
+- Chat: OpenRouter
+- Text splitters / orchestration: LangChain
+- PDF parsing: `pdf-parse`
 
-| Técnica aplicada         | Recall@5 | Recall@10 | Δ R@5      |
-| ------------------------ | -------- | --------- | ---------- |
-| Baseline (chunks planos) | 72.1%    | 79.1%     | —          |
-| + Chunking contextual    | 80.0%    | 86.7%     | **+7.9pp** |
+## Configuracion
 
-El mayor impacto fue en documentos legales: `cnev_nacional` pasó de **57.7% → 76.7%** (+19pp) gracias al contexto de sección prepended.
-
-## 🛠️ Tech Stack
-
-- **Framework**: [NestJS](https://nestjs.com/) (Node.js) - Arquitectura modular y escalable.
-- **Base de Datos**: PostgreSQL + TypeORM.
-- **IA & LangChain**:
-  - `@langchain/openai`: Para embeddings.
-  - `@langchain/core`: Orquestación de cadenas y prompts.
-  - **OpenRouter**: Acceso unificado a múltiples modelos de chat.
-- **Reranker**: `BAAI/bge-reranker-v2-m3` vía HuggingFace Inference API (cross-encoder multilingüe).
-- **Infraestructura**: Docker (opcional para DB), Ngrok (para tunneling de webhooks en desarrollo).
-
-## 🚀 Instalación y Configuración
-
-### 1. Clonar el repositorio
-
-```bash
-git clone <url-del-repo>
-cd gmc-chatbot
-```
-
-### 2. Instalar dependencias
+### 1. Instalar dependencias
 
 ```bash
 npm install
 ```
 
-### 3. Configurar Variables de Entorno
+### 2. Variables de entorno
 
-Crea un archivo `.env` en la raíz basado en `.env.example`. Variables clave:
+Crea `.env` en la raiz. Variables importantes:
 
 **Base de datos**
 
-- `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`
+- `DB_HOST`
+- `DB_PORT`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `DB_NAME`
+- `DB_SSL`
 
 **IA**
 
-- `OPENAI_API_KEY`: Para generar embeddings.
-- `OPENROUTER_API_KEY`: Para el modelo de chat.
-- `CHAT_MODEL`: Modelo a usar (ej: `google/gemini-flash-1.5`).
+- `OPENAI_API_KEY`
+- `OPENROUTER_API_KEY`
+- `CHAT_MODEL`
+- `EMBEDDING_DIMENSION`
 
-**RAG híbrido**
+**RAG**
 
-- `RAG_SEMANTIC_WEIGHT`: Peso semántico (default `0.6`). Léxico = `1 - semántico`.
+- `RAG_SEMANTIC_WEIGHT`
 
-**Reranker** _(opcional)_
+**Reranker**
 
-- `RERANKER_ENABLED`: `true` para habilitar (default `false`).
-- `HF_API_KEY`: Token de HuggingFace (tier gratuito funciona).
-- `RERANKER_MODEL`: Modelo a usar (default `BAAI/bge-reranker-v2-m3`).
+- `RERANKER_ENABLED`
+- `HF_API_KEY`
+- `RERANKER_MODEL`
 
 **Ingesta de PDFs**
 
-- `CHUNK_SIZE`: Tamaño de chunks en tokens (default `512`). Modificar para experimentos.
-- `CHUNK_OVERLAP`: Solapamiento entre chunks (default `50`).
+- `CHUNK_SIZE`
+- `CHUNK_OVERLAP`
+- `INGEST_SOURCES`
 
 **WhatsApp**
 
-- `WHATSAPP_API_TOKEN`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_PHONE_ID`.
+- `WHATSAPP_API_TOKEN`
+- `WHATSAPP_VERIFY_TOKEN`
+- `WHATSAPP_APP_SECRET`
+- `WHATSAPP_PHONE_ID`
 
-### 4. Ejecutar Migraciones
-
-Asegúrate de que la base de datos esté corriendo.
+### 3. Migraciones
 
 ```bash
-npm run typeorm -- migration:run -d ./typeorm.config.ts
+npm run migration:run
 ```
 
-**Nota**: Si ya tenés datos en la DB y estás actualizando a RAG híbrido, la migración `AddFullTextSearch` automáticamente:
+## Carga de conocimiento
 
-- Agrega la columna `search_vector` (tsvector)
-- Crea índice GIN para búsquedas rápidas
-- Configura trigger para actualización automática
-- Pobla los registros existentes sin tocar los embeddings
+### Reglas / FAQs desde `knowledge-base.json`
 
-### 5. Ingestar Base de Conocimiento
-
-Carga los datos desde `knowledge-base.json` y PDFs:
+Con el servidor Nest corriendo:
 
 ```bash
-# Cargar FAQs del JSON
-npm run build && node dist/ingest-data.js
+npx ts-node ingest-data.ts
+```
 
-# Cargar manuales PDF (chunking contextual por sección)
+### PDFs oficiales
+
+Con el servidor Nest corriendo:
+
+```bash
 npx ts-node scripts/ingest-pdfs.ts
-
-# Para experimentos de tamaño de chunk (re-ingestar con otro tamaño):
-CHUNK_SIZE=256 npx ts-node scripts/ingest-pdfs.ts
-CHUNK_SIZE=1024 CHUNK_OVERLAP=100 npx ts-node scripts/ingest-pdfs.ts
 ```
 
-> **Tip**: Para reingestar solo un documento específico usá `INGEST_SOURCES=manual_pba` (o `cnev_nacional`, `bateria_preguntas`).
-
-## ▶️ Ejecución
+Para reingestar solo una fuente:
 
 ```bash
-# Desarrollo (con watch mode)
-npm run start:dev
-
-# Producción
-npm run start:prod
+INGEST_SOURCES=manual_pba npx ts-node scripts/ingest-pdfs.ts
+INGEST_SOURCES=cnev_nacional npx ts-node scripts/ingest-pdfs.ts
+INGEST_SOURCES=bateria_preguntas npx ts-node scripts/ingest-pdfs.ts
 ```
 
-## 🔍 Configuración del RAG Híbrido
+Si cambia el parser de PDFs o la normalizacion de tablas:
 
-El sistema combina dos tipos de búsqueda para obtener los mejores resultados:
+```bash
+# 1. limpiar el source afectado
+DELETE /knowledge/clear?source=manual_pba
 
-### Pesos de búsqueda (variables de entorno):
-
-- **60% Semántica** (`RAG_SEMANTIC_WEIGHT=0.6`): Captura parafraseo y contexto ("papeles del auto" → "documentación vehicular")
-- **40% Léxica**: Matchea términos exactos ("Ley 27.714", "velocidad máxima", "cédula verde")
-
-### Casos de uso óptimos:
-
-| Tipo de consulta             | Mejor resultado con          |
-| ---------------------------- | ---------------------------- |
-| "¿Qué documentos necesito?"  | Semántica (parafraseo)       |
-| "¿Qué dice la ley 27714?"    | Léxica (término exacto)      |
-| "velocidad máxima en calles" | Léxica + Semántica (híbrido) |
-| "¿Cómo saco la licencia?"    | Semántica (contexto)         |
-
-### Reranker (opcional):
-
-Cuando `RERANKER_ENABLED=true`, el pipeline se expande:
-
-1. Hybrid search recupera **15 candidatos** (en lugar de 5).
-2. El cross-encoder `BAAI/bge-reranker-v2-m3` re-puntúa cada par `(query, chunk)`.
-3. Solo los **top 5** por score del reranker pasan al prompt del LLM.
-
-El reranker mantiene un warmup automático cada 5 minutos para evitar cold starts del tier gratuito de HuggingFace.
-
-### Chunking contextual:
-
-Cada chunk de PDF se almacena con un prefijo de contexto:
-
+# 2. reingestar solo ese PDF
+INGEST_SOURCES=manual_pba npx ts-node scripts/ingest-pdfs.ts
 ```
+
+## Como funciona el RAG
+
+### Retrieval hibrido
+
+El sistema combina:
+
+- Busqueda semantica con embeddings
+- Busqueda lexica con `tsvector` / `plainto_tsquery`
+- Score combinado via `RAG_SEMANTIC_WEIGHT`
+
+Casos tipicos:
+
+- Consultas parafraseadas: mejoran con semantica
+- Leyes, siglas y velocidades: mejoran con lexico
+- Preguntas ambiguas: mejoran con el score hibrido
+
+### Reranker
+
+Si `RERANKER_ENABLED=true`:
+
+1. Se recuperan 15 candidatos.
+2. El cross-encoder de HuggingFace reranquea esos candidatos.
+3. Solo los top 5 pasan al prompt final.
+
+### Chunking contextual
+
+Cada chunk de PDF se guarda con este prefijo:
+
+```text
 Documento: Manual Oficial Provincia BSAS
-Sección: ARTÍCULO 51
+Seccion: ARTICULO 51
 
 <texto del chunk>
 ```
 
-Esto asegura que el embedding captura el contexto del documento incluso en chunks pequeños, mejorando especialmente la recuperación en textos legales numerados.
+Esto mejora embeddings y retrieval sobre documentos legales largos.
 
-## 🧪 Evaluación (RAG Evals)
+### Normalizacion dirigida de tablas
 
-El repositorio incluye un sistema completo de evaluación para medir y comparar mejoras:
+`manual_pba.pdf` contiene cuadros que `pdf-parse` linealiza como una secuencia de etiquetas y numeros. Eso puede romper la relacion entre:
 
-### Scripts disponibles:
+- lugar
+- tipo de vehiculo
+- velocidad maxima
+- velocidad minima
+
+Para corregirlo, la ingesta detecta la seccion `LIMITES MAXIMOS Y MINIMOS DE VELOCIDAD` y genera filas atomicas como:
+
+```text
+En autopistas, la velocidad minima para motos y automoviles es 65 km/h y la maxima es 130 km/h.
+En autopistas, la velocidad minima para omnibus y autocasas es 65 km/h y la maxima es 100 km/h.
+En semiautopistas o autovias, la velocidad maxima para camionetas es 110 km/h y la minima general es 40 km/h, salvo maquinaria especial.
+```
+
+Cada fila se almacena con metadata adicional:
+
+- `contentType: table-row`
+- `tableId: manual_pba_speed_limits`
+- `rowKey: <identificador_semantico>`
+
+Eso evita que varias filas del cuadro queden mezcladas en un mismo chunk.
+
+### Normalizacion de queries
+
+Antes de generar embeddings o hacer full-text search, el sistema normaliza variantes frecuentes del dominio vial. La pregunta original del usuario se conserva para la respuesta final del LLM; solo se corrige la fase de recuperacion.
+
+Ejemplos actuales:
+
+- `autoposta` -> `autopista`
+- `autopostas` -> `autopistas`
+- `semi autopista` -> `semiautopista`
+
+## Ejecucion
 
 ```bash
-# 1. Generar preguntas sintéticas desde los chunks de la DB
+# desarrollo
+npm run start:dev
+
+# produccion
+npm run start:prod
+```
+
+## Evaluacion
+
+Scripts disponibles:
+
+```bash
+# generar preguntas sinteticas desde chunks de la DB
 npm run eval:generate
-# → Guarda eval-data/eval-questions.json (~120 preguntas, 15 chunks x 4 sources)
 
-# 2. Medir Recall@5 y Recall@10 contra el servidor en vivo
+# medir retrieval
 npm run eval:run
-# → Imprime tabla por source y guarda eval-data/results/eval-{timestamp}.json
 
-# 3. Evaluar calidad de respuestas con LLM-as-judge (requiere servidor activo)
+# medir retrieval con reranker
+npm run eval:run:rerank
+
+# evaluar respuestas con LLM-as-judge
 npm run eval:answers
-# → Mide correct / grounded / complete y guarda eval-data/results/answer-eval-{timestamp}.json
 ```
 
-### Métricas:
-
-| Métrica      | Descripción                                                                                     |
-| ------------ | ----------------------------------------------------------------------------------------------- |
-| **Recall@k** | ¿Aparece el chunk fuente en los top-k resultados de búsqueda? Mide la recuperación del sistema. |
-| **Correct**  | La respuesta es factualmente precisa.                                                           |
-| **Grounded** | La respuesta se basa en el contexto recuperado (no alucina).                                    |
-| **Complete** | La respuesta aborda todos los aspectos de la pregunta.                                          |
-
-### Workflow de experimentación:
+Workflow tipico:
 
 ```bash
-# 1. Re-ingestar con nuevo chunk size
-DELETE /knowledge/clear?source=manual_pba   # limpiar source
-CHUNK_SIZE=256 npx ts-node scripts/ingest-pdfs.ts
+# 1. limpiar y reingestar la fuente que cambiaste
+DELETE /knowledge/clear?source=manual_pba
+INGEST_SOURCES=manual_pba npx ts-node scripts/ingest-pdfs.ts
 
-# 2. Regenerar preguntas (si cambiaron los chunks)
+# 2. regenerar evals si cambiaron los chunks
 npm run eval:generate
 
-# 3. Medir impacto
+# 3. medir impacto
 npm run eval:run
-
-# 4. Comparar JSONs en eval-data/results/
+npm run eval:run:rerank
 ```
 
-## 🧪 Testing
+## Testing
 
 ```bash
-# Unit tests
-npm run test
-
-# e2e tests
-npm run test:e2e
+npm test
+npx tsc -p tsconfig.json --noEmit
+npm run build
 ```
+
+Los tests cubren:
+
+- normalizacion de tablas del `manual_pba`
+- validacion de chunks tabulares
+- normalizacion de queries RAG
+- uso de la query normalizada en `KnowledgeService`
 
 ---
 
 <p align="center">
-  <i>Desarrollado para facilitar el aprendizaje y la gestión en Autoescuela GMC.</i>
+  <i>Desarrollado para facilitar la atencion y el aprendizaje en Autoescuela GMC.</i>
 </p>

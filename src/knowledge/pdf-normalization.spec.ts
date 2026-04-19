@@ -1,7 +1,4 @@
-import {
-  isValidChunk,
-  normalizePdfContent,
-} from './pdf-normalization';
+import { isValidChunk, normalizePdfContent } from './pdf-normalization';
 
 const SPEED_LIMITS_FIXTURE = `LÍMITES MÁXIMOS Y MÍNIMOS DE VELOCIDAD
 autopistas
@@ -77,6 +74,92 @@ AMBAS
 USO DE LAS LUCES
 Texto siguiente.`;
 
+const CNEV_REQUIREMENTS_FIXTURE = `CENAT
+Requisitos para circular en la Argentina
+El conductor debe portar:
+La licencia que lo habilita para conducir
+esa clase de vehiculo.
+C ehiculo.
+Comprobante de poliza de seguro vigente.
+Placa patente correctamente colocada.
+C evision Tecnica
+Obligatoria.
+ABC 123
+LICENCIA SEGURO
+CÉDULA
+RTO
+
+conductor con la siguiente documentacion:
+a. Documento de Identidad valido para
+circular en el MERCOSUR.
+b. Licencia para conducir.
+c. Titulo u otro documento oficial que
+acredite la propiedad del vehiculo.
+d. Comprobante de seguro vigente.`;
+
+const CNEV_URBAN_SPEED_FIXTURE = `Reglas de velocidades: limites
+maximos y minimos de velocidad
+(zona urbana, zona rural)
+Calles
+Avenidas
+Vias semaforizadas
+Intersecciones
+Rutas en zona urbana
+Autopistas
+Paso a nivel sin barrera
+Ruta
+Semiautopistas
+Todos
+Todos
+Todos
+Todos
+Todos
+Motos y autos
+Camionetas
+Micros, buses y casas autopropulsadas
+Motos y autos
+Omnibus y casas autopropulsadas
+Camionetas
+Camiones y autos con casa rodante
+Todos
+Motos y autos
+Camionetas, micros, buses y casas
+autopropulsadas
+Camiones y autos con casa rodante
+110 km/h
+90 km/h
+80 km/h
+40 km/h
+40 km/h
+Salvo maquinaria especial
+40 km/h Salvo maq. especial
+40 km/h Salvo maq. especial
+40 km/h Salvo maq. especial
+40 km/h Salvo maq. especial
+65 km/h
+65 km/h
+65 km/h
+65 km/h
+20 km/h
+40 km/h
+60 km/h
+Coordinacion semaforica
+30 km/h
+60 km/h
+120 km/h
+110 km/h
+90 km/h
+130 km/h
+100 km/h
+110 km/h
+80 km/h
+20 km/h
+20 km/h
+30 km/h
+Mitad del maximo
+15 km/h
+30 km/h`;
+
 describe('pdf normalization', () => {
   it('expande la tabla de velocidades de manual_pba en filas atomicas', () => {
     const blocks = normalizePdfContent(
@@ -104,6 +187,11 @@ describe('pdf normalization', () => {
     ).toContain('110 km/h');
     expect(
       tableRows.find(
+        (block) => block.metadata.rowKey === 'rural_carreteras_motos_automoviles',
+      )?.content,
+    ).toContain('En rutas, carreteras o caminos comunes');
+    expect(
+      tableRows.find(
         (block) => block.metadata.rowKey === 'urbana_vias_semaforizadas',
       )?.content,
     ).toContain('coordinacion semaforica');
@@ -121,5 +209,58 @@ describe('pdf normalization', () => {
 
     expect(targetRow).toBeDefined();
     expect(isValidChunk(targetRow!.content, targetRow!.metadata)).toBe(true);
+  });
+
+  it('normaliza los requisitos para circular del cnev', () => {
+    const blocks = normalizePdfContent(
+      'cnev_nacional',
+      CNEV_REQUIREMENTS_FIXTURE,
+      'Ley Nacional de Transito (CNEV)',
+    );
+
+    const argentinaRequirements = blocks.find(
+      (block) =>
+        block.metadata.rowKey === 'argentina_documentacion_obligatoria',
+    );
+    const mercosurRequirements = blocks.find(
+      (block) =>
+        block.metadata.rowKey === 'mercosur_documentacion_obligatoria',
+    );
+
+    expect(argentinaRequirements?.content).toContain('licencia habilitante');
+    expect(argentinaRequirements?.content).toContain(
+      'Revision Tecnica Obligatoria',
+    );
+    expect(mercosurRequirements?.content).toContain(
+      'documento de identidad valido',
+    );
+    expect(mercosurRequirements?.content).toContain(
+      'comprobante de seguro vigente',
+    );
+  });
+
+  it('normaliza las velocidades urbanas del cnev', () => {
+    const blocks = normalizePdfContent(
+      'cnev_nacional',
+      CNEV_URBAN_SPEED_FIXTURE,
+      'Ley Nacional de Transito (CNEV)',
+    );
+
+    const rows = blocks.filter(
+      (block) => block.metadata.tableId === 'cnev_urban_speed_limits',
+    );
+
+    expect(rows).toHaveLength(5);
+    expect(
+      rows.find((block) => block.metadata.rowKey === 'urbana_calles')?.content,
+    ).toContain('40 km/h');
+    expect(
+      rows.find(
+        (block) => block.metadata.rowKey === 'urbana_vias_semaforizadas',
+      )?.content,
+    ).toContain('coordinacion semaforica');
+    expect(
+      rows.find((block) => block.metadata.rowKey === 'urbana_rutas')?.content,
+    ).toContain('60 km/h');
   });
 });
